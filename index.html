@@ -655,7 +655,9 @@
     if (!j) throw err("Nothing was printed for this step yet.", 404);
     const [slug, step] = key.includes(":") ? key.split(":") : ["", key];
     const iv = slug ? p.interviews.find(x => x.slug === slug) : null;
-    const head = `$ uv run agents.py ${step}${iv ? " " + iv.file : ""}\n\n(Demo: a simulated run. No AI was called.)\n\n`;
+    const note = (p.notes || {})[key];
+    const head = `$ uv run agents.py ${step}${iv ? " " + iv.file : ""}${note ? ` --note="${note}"` : ""}\n\n(Demo: a simulated run. No AI was called.` +
+      (note ? " Your instruction was given to the agent; in the demo the result is the same pre-written example." : "") + ")\n\n";
     const body = {
       check: "Stage 0 - the transcript check (1 agent)\n  Wrote the notes: speakers, misheard words, wrong labels, names to hide.\n",
       read: iv ? `Building the transcript list (guide.py prepare)\nCutting ${iv.file} into four parts (guide.py split)\n\nStage 1 - the five readers at work at the same time (A, B, C, D, E)\n` +
@@ -680,7 +682,9 @@
     const what = { check: "Stage 0 — transcript check", reread: "Stage 3 — re-read", latent: "Stage 4 — behind the lines", codebook: "Stage 2 — theme list", cross: "Stage 6 — cross-analysis" };
     const k = Object.keys(what).find(x => prefix.endsWith(x));
     if (!k || !p.jobs[iv ? `${iv.slug}:${k}` : k]) return [];
-    return [{ name: prefix, general: pre, words: "about 3,000", specific: `[the general part, shown above]\n\n## ${what[k]}\n\n${(D.stages.find(s => s.heading === what[k]) || {}).text || ""}\n\n(Demo: the transcript and notes would follow here.)` }];
+    const note = (p.notes || {})[iv ? `${iv.slug}:${k}` : k];
+    return [{ name: prefix, general: pre, words: "about 3,000", specific: `[the general part, shown above]\n\n## ${what[k]}\n\n${(D.stages.find(s => s.heading === what[k]) || {}).text || ""}` +
+      (note ? `\n\n## The researcher's instruction for this run\n${note}` : "") + "\n\n(Demo: the transcript and notes would follow here.)" }];
   }
   function search(p, q) {
     const w = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -725,13 +729,40 @@
     throw err("Not found", 404);
   }
 
+  // The researcher removes a theme (its findings become "not placed"), or puts it back; the list then needs approving again.
+  function themeOutOrBack(p, tid, out) {
+    if (p.running) throw err("A step is running. Change the theme list once it has finished.");
+    if (!p.cb) throw err("Not found", 404);
+    if (p.cb.frozen) throw err("The theme list is frozen: it can no longer change.");
+    const cb = p.cb.data, aside = (cb.removed_by_researcher ||= []);
+    if (out) {
+      const t = cb.themes.find(x => x.id === tid); if (!t) throw err("Not found", 404);
+      const group = (cb.groups || []).find(g => g.themes.includes(tid));
+      cb.themes = cb.themes.filter(x => x !== t);
+      if (group) group.themes = group.themes.filter(x => x !== tid);
+      const emptied = group ? { ...group, themes: [] } : null;
+      cb.groups = (cb.groups || []).filter(g => g.themes.length);
+      (cb.unplaced ||= []).push(...(t.sub_themes || []).flatMap(s => s.representative_codes || [])
+        .map(c => ({ code: c, reason: `Its theme was removed by you: ${t.name}`, from_theme: tid })));
+      aside.push({ theme: t, group: group ? group.id : "", group_entry: emptied, at: nowIso() });
+    } else {
+      const entry = aside.find(r => r.theme.id === tid); if (!entry) throw err("Not found", 404);
+      cb.removed_by_researcher = aside.filter(r => r !== entry);
+      cb.themes.push(entry.theme);
+      const group = (cb.groups || []).find(g => g.id === entry.group);
+      if (group) group.themes.push(tid); else if (entry.group_entry) (cb.groups ||= []).push({ ...entry.group_entry, themes: [tid] });
+      cb.unplaced = (cb.unplaced || []).filter(u => u.from_theme !== tid);
+    }
+    p.cb.approved = false;
+  }
   function addInterview(p, body) {
     const used = new Set(p.interviews.map(iv => iv.sample));
     const next = Object.keys(D.samples).find(k => !used.has(k));
     const dup = p.interviews.find(iv => iv.original === body.filename);
     if (dup && !body.force) throw err(`${body.filename} is already in this project, as ${dup.label}.`, 409, { duplicate: true });
     if (!next) throw err("The demo has three invented interviews, and all three are already in this project. Remove one to add it again.");
-    const s = D.samples[next], n = Math.max(0, ...p.interviews.map(iv => iv.n)) + 1;
+    const s = D.samples[next], n = Math.max(p.next_n || 0, Math.max(0, ...p.interviews.map(iv => iv.n)) + 1);
+    p.next_n = n + 1;  // never reuse a removed number
     const slug = `int${String(n).padStart(2, "0")}-${s.date}`;
     const iv = { n, slug, label: `Interview ${n}`, original: body.filename && !body.filename.startsWith("sample:") ? `${body.filename} (demo: replaced by ${s.original})` : s.original,
       file: `INT${String(n).padStart(2, "0")}-${s.date}.txt`, words: s.words, status: "extracting", message: "", sample: next,
@@ -779,6 +810,7 @@
           case "rerun": {
             const step = b.step;
             if (b.note && p.running) throw err("Another step is running. Refine this one once it has finished.");
+            if (b.note) (p.notes ||= {})[`${iv.slug}:${step}`] = b.note; else delete (p.notes || {})[`${iv.slug}:${step}`];
             if (step === "check") Object.assign(iv, { checkDone: false, check_approved: false });
             if (step === "read") { iv.readDone = false; if (p.cb && !p.cb.frozen) p.cb.includes = p.cb.includes.filter(x => x !== iv.slug); }
             if (step === "reread") iv.rereadDone = false;
@@ -802,7 +834,11 @@
           (p.cb?.data.themes || []).forEach(t => { if (b.themes && t.id in b.themes) t.name = b.themes[t.id] || t.name; });
           (p.cb?.data.groups || []).forEach(g => { if (b.groups && g.id in b.groups) g.name = b.groups[g.id] || g.name; });
         } else if (action === "approve") { p.cb.approved = true; p.cb.frozen = !!b.freeze; }
-        else if (action === "rerun") { delete p.jobs.codebook; if (!p.running) start(p, "codebook"); save(); return json(view(p)); }
+        else if (action === "rerun") {
+          if (b.note) (p.notes ||= {}).codebook = b.note;
+          delete p.jobs.codebook; if (!p.running) start(p, "codebook"); save(); return json(view(p));
+        }
+        else if (action === "remove-theme" || action === "restore-theme") themeOutOrBack(p, b.id, action === "remove-theme");
         break;
       }
       case "report": if (!p.running) start(p, "report"); break;
@@ -822,7 +858,9 @@
       }
       case "edit": {
         const lines = (k) => k in b ? (Array.isArray(b[k]) ? b[k] : String(b[k]).split("\n")).map(x => String(x).trim()).filter(Boolean) : p[k];
+        if ("question" in b && !String(b.question).trim()) throw err("The research question cannot be empty.");
         const q = String(b.question ?? p.question).trim() || p.question, subs = lines("sub_questions"), priors = lines("priors");
+        if (JSON.stringify(subs) !== JSON.stringify(p.sub_questions) && p.running) throw err("A step is running. Change the sub-questions once it has finished.");
         if (q !== p.question || JSON.stringify(subs) !== JSON.stringify(p.sub_questions) || JSON.stringify(priors) !== JSON.stringify(p.priors)) p.context_changed_at = secs();
         Object.assign(p, { name: String(b.name ?? p.name).trim() || p.name, question: q, sub_questions: subs, priors });
         break;
