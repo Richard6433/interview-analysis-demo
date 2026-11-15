@@ -74,8 +74,11 @@
   .next.you { border-left-color: var(--warn); } .next.failed { border-left-color: var(--bad); }
   .topbar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
   code { background: var(--code); border-radius: 4px; padding: 1px 6px; font: 13px var(--f-mono); }
+  #menu-toggle { display: none; }
   @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); }
-    aside#side { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); } }
+    aside#side { position: static; max-height: none; height: auto; border-right: 0; border-bottom: 1px solid var(--line); display: none; }
+    body.menu-open aside#side { display: block; }
+    #menu-toggle { display: inline-block; } }
   .banner { background: var(--accent-soft); border-left: 4px solid var(--accent);
             padding: 10px 14px; border-radius: 6px; margin-bottom: 18px; }
   .banner b { color: var(--accent); }
@@ -100,8 +103,12 @@
   .cards2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 14px; margin-bottom: 14px; }
   .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 8px; }
   h3.sec { margin: 22px 0 10px; font: 600 17px/1.3 var(--f-display); }
-  ol.plain { margin: 0; padding-left: 20px; } ol.plain li { margin: 2px 0; }
-  .pen { border: 0; background: none; color: var(--muted); opacity: .55; padding: 2px 6px; margin-left: 2px; font-size: 14px; border-radius: 4px; }
+  ol.plain { margin: 0; padding-left: 20px; } ol.plain li { margin: 2px 0; } ol.plain.bare { list-style: none; padding-left: 0; }
+  button.link.danger { color: var(--bad); }
+  .error { white-space: pre-line; }
+  label.opt.freeze { display: block; } label.opt.freeze b { white-space: nowrap; } label.opt.freeze .muted { display: block; margin-left: 24px; }
+  @media (max-width: 1100px) { .stepper .stc { display: none; } }
+  .pen { border: 0; background: none; color: var(--muted); opacity: .8; padding: 2px 6px; margin-left: 2px; font-size: 14px; border-radius: 4px; }
   .etext:hover .pen, .pen:hover, .pen:focus-visible { opacity: 1; color: var(--accent); background: var(--accent-soft); }
   .ai-act button { border: 0; background: none; color: var(--muted); padding: 3px 8px; }
   .ai-act button:hover:not([disabled]), .ai-act button:focus-visible { color: var(--accent); background: var(--accent-soft); }
@@ -139,6 +146,9 @@
   .etext.ed { display: block; } .etext.ed textarea { width: 100%; margin-bottom: 6px; }
   details.orig { display: inline; margin-left: 6px; } details.orig summary { display: inline; font-size: 11px; }
   .item.removed { opacity: .55; }
+  .off-card { background: var(--code); }
+  .ai-wait { font-size: 12.5px; color: var(--muted); }
+  .found { display: block; margin-top: 6px; font-weight: 400; color: var(--muted); font-size: 13px; }
   .refine { border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; margin-top: 8px; width: 100%; }
   .refine textarea { width: 100%; margin: 4px 0 6px; }
   .num { font-variant-numeric: tabular-nums; text-align: right; }
@@ -232,7 +242,7 @@
   ol.path button { border: 0; background: none; padding: 0; position: relative; display: inline-flex; flex-direction: column;
                    align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
   .node { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 600;
-          background: var(--surface); border: 2px solid var(--line); color: var(--muted); }
+          background: var(--surface); border: 2px solid var(--line); color: var(--muted); position: relative; z-index: 1; }
   ol.path li.done .node { background: var(--ok); border-color: var(--ok); color: var(--on-accent); }
   ol.path li.you .node { border-color: var(--warn); color: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
   ol.path li.running .node { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -314,7 +324,8 @@
 </head>
 <body>
 <header>
-  <h1 id="home-link" title="Back to my projects"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h12M4 10h8M4 15h10"/><circle cx="16.5" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg>Interview analysis</h1>
+  <button id="menu-toggle" type="button" aria-expanded="false" aria-controls="side">☰ Menu</button>
+  <h1 id="home-link" title="Back to my projects" tabindex="0" role="link"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h12M4 10h8M4 15h10"/><circle cx="16.5" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg>Interview analysis</h1>
   <span class="crumb" id="crumb"></span>
   <span class="saved" id="saved" aria-live="polite"></span>
   <button id="theme-toggle" type="button" aria-label="Switch between light and dark">Dark</button>
@@ -885,10 +896,10 @@ const store = {
 };
 let view = store.get(VIEW_KEY, { screen: "home" });
 { // #screen/project/interview opens that screen directly
-  const [screen, pid, slug, step] = decodeURIComponent(location.hash.slice(1)).split("/");
-  if (screen) view = { screen, pid, slug, step };
+  const [screen, pid, slug, step] = location.hash.slice(1).split("/").map(decodeURIComponent);
+  if (screen) view = { screen, pid, slug: slug || undefined, step: step || undefined };
 }
-let confirmDelete = false;
+let confirmDelete = false, confirmSameName = "";
 let project = null, projects = [], pollTimer = null, errorMsg = "", cache = {};
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const val = (id) => document.getElementById(id).value;
@@ -918,23 +929,42 @@ function showError(m) { errorMsg = m; render(); }
 const NAV_KEY = "analysis-nav-v1";
 let navStack = (() => { try { return JSON.parse(sessionStorage.getItem(NAV_KEY)) || []; } catch { return []; } })();
 function saveNav() { try { sessionStorage.setItem(NAV_KEY, JSON.stringify(navStack.slice(-50))); } catch {} }
-function show(v) {
+// Each part keeps its place (an empty interview stays empty), so a search or a section survives a reload.
+const hashOf = (v) => {
+  if (v.screen === "home") return location.pathname;
+  const parts = [v.screen, v.pid, v.slug, v.step].map(x => x || "");
+  while (parts.length && !parts[parts.length - 1]) parts.pop();
+  return "#" + parts.map(encodeURIComponent).join("/");
+};
+// Editors, Refine and confirmations belong to the page they were opened on.
+function closeEditors() { editing.clear(); refining = regenAsk = themeAsk = null; }
+function show(v, push = false) {
+  closeEditors();
   view = v;
   store.set(VIEW_KEY, view);
-  history.replaceState(null, "", v.screen === "home" ? location.pathname
-    : "#" + [v.screen, v.pid, v.slug, v.step].filter(Boolean).join("/"));
+  if (push) history.pushState(null, "", hashOf(v)); else history.replaceState(null, "", hashOf(v));
   errorMsg = ""; cache = {};
   load();
 }
 function go(screen, extra = {}) {
   confirmDelete = false;
   navStack.push(view); saveNav();
-  show({ screen, pid: view.pid, ...extra });
+  show({ screen, pid: view.pid, ...extra }, true);
 }
 function back() {
-  const prev = navStack.pop(); saveNav();
-  show(prev || (view.pid && view.screen !== "project" ? { screen: "project", pid: view.pid } : { screen: "home" }));
+  if (navStack.length) { navStack.pop(); saveNav(); history.back(); return; }  // the browser comes back to the page before
+  show(view.pid && view.screen !== "project" ? { screen: "project", pid: view.pid } : { screen: "home" });
 }
+// The browser's Back/Forward, or an address typed in the bar: open that page.
+function fromAddress() {
+  const [screen, pid, slug, step] = location.hash.slice(1).split("/").map(decodeURIComponent);
+  const v = screen ? { screen, pid, slug: slug || undefined, step: step || undefined } : { screen: "home" };
+  if (hashOf(v) === hashOf(view)) return;
+  closeEditors();
+  view = v; store.set(VIEW_KEY, view); errorMsg = ""; cache = {}; load();
+}
+window.addEventListener("popstate", fromAddress);
+window.addEventListener("hashchange", fromAddress);
 let waiting = null;  // how many decisions were waiting at the last look
 function yourTurn() {
   const n = project ? queue(project).length : 0;
@@ -945,9 +975,7 @@ function yourTurn() {
   waiting = project ? n : null;
 }
 // Asked once, on a first click (browsers only allow it after a click).
-document.addEventListener("click", () => {
-  if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
-}, { once: true });
+const askNotify = () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {}); };
 
 async function load() {
   clearTimeout(pollTimer);
@@ -1089,7 +1117,7 @@ function stages(p) {
   const ivs = visibleInterviews(p);
   const st = (iv, id) => (p.steps[iv.slug] || []).find(x => x.id === id)?.state;
   const any = (ids, state) => ivs.some(iv => ids.some(id => st(iv, id) === state) || (state === "failed" && iv.status === "error" && ids.includes("extract")));
-  const stage = (ids, done) => any(ids, "failed") ? "failed" : any(ids, "running") ? "running" : done ? "done" : any(ids, "you") ? "you" : "todo";
+  const stage = (ids, done) => any(ids, "failed") ? "failed" : any(ids, "running") ? "running" : any(ids, "you") ? "you" : done ? "done" : "todo";
   const ready = ivs.filter(iv => iv.check_approved).length, approved = ivs.filter(iv => iv.final_approved).length;
   return [
     { zone: "A", name: "Inputs", go: "project", count: ivs.length ? `${ready} of ${ivs.length} checked by you` : "add interviews",
@@ -1100,11 +1128,24 @@ function stages(p) {
       state: ["cross", "report"].includes(p.running) ? "running" : p.cross.exists && p.reports.length ? "done" : p.cross.exists ? "you" : "todo" },
   ];
 }
+// What the platform is doing right now, in words, with a link to where it shows.
+function runLabel(p) {
+  const [sl, st] = (p.running || "").split(":");
+  if (st) {
+    const iv = p.interviews.find(x => x.slug === sl);
+    const what = { check: "transcript check", read: "the five readers", reread: "re-read against the themes", latent: "reading behind the lines" }[st] || st;
+    return { text: `${iv ? iv.label : sl}: ${what}`, go: `data-iv="${esc(sl)}"` };
+  }
+  return { codebook: { text: "the theme list (grouping the findings)", go: 'data-nav-go="codebook"' },
+           cross: { text: "the cross-analysis (comparing the approved interviews)", go: 'data-nav-go="results"' },
+           report: { text: "the findings report (written, then built into Word)", go: 'data-nav-go="results"' } }[p.running] || { text: p.running, go: "" };
+}
 function nextAction(p) {
   const n = queue(p).length;
   if (n) return `<button class="primary" data-nav-go="review">Review ${n} decision${n > 1 ? "s" : ""} →</button>`;
   if (!visibleInterviews(p).length) return `<button class="primary" data-nav-go="project">Add interviews →</button>`;
-  if (p.running) return `<span class="muted">${spinner} Working on it. You can leave this page.</span>`;
+  if (p.running) { const r = runLabel(p);
+    return `<span class="muted">${spinner} Running now: <button class="link" ${r.go}>${esc(r.text)}</button> · you can leave this page</span>`; }
   if (p.cross.exists && !p.reports.length) return `<button class="primary" data-act="report">Build the findings report →</button>`;
   if (p.interviews.some(iv => iv.final_approved))
     return ["results", "cross"].includes(view.screen) ? `<button class="primary" data-act="download-all">Download everything ↓</button>`
@@ -1141,6 +1182,7 @@ const footer = (p) => `<footer class="pfoot"><span>Pipeline version <b>${esc(p.p
 const editing = new Set();
 let refining = null;  // the AI step being refined with an instruction
 let regenAsk = null;  // the AI step whose Regenerate waits for "Yes, run it again"
+let themeAsk = null;  // the theme whose removal from an approved list waits for "Remove it"
 const EDITS = {};
 const origOf = (item, key) => item?.edited_by_researcher?.original?.["@" + key];
 function etext(id, value, loc, orig, multi = true) {
@@ -1167,9 +1209,10 @@ function aiActions(key, label) {
   if (regenAsk === key) return `<div class="refine"><b>Run ${esc(label)} again?</b> It takes a few minutes. The current version is kept in backups;
       what it produces must then be approved again.
     <div class="row" style="margin-top:6px"><button class="small" data-regen-cancel="1">Cancel</button><button class="small primary" data-regen-go="${esc(key)}">Yes, run it again</button></div></div>`;
-  const busy = project.running ? 'disabled title="Wait until the running step has finished"' : "";
-  return `<span class="row ai-act"><button class="small" data-regen="${esc(key)}" ${busy} title="Run ${esc(label)} again; the current version is kept in backups">↻ Regenerate</button>
-    <button class="small" data-refine="${esc(key)}" ${busy} title="Run ${esc(label)} again with an instruction of yours">✦ Refine…</button></span>`;
+  // While an agent works, nothing else can run: say so instead of showing buttons that do nothing.
+  if (project.running) return `<span class="ai-wait">${spinner} Regenerate / Refine: available once the step running now has finished</span>`;
+  return `<span class="row ai-act"><button class="small" data-regen="${esc(key)}" title="Run ${esc(label)} again; the current version is kept in backups">↻ Regenerate</button>
+    <button class="small" data-refine="${esc(key)}" title="Run ${esc(label)} again with an instruction of yours">✦ Refine…</button></span>`;
 }
 async function runAgain(key, instruction) {
   const [step, slug] = key.split(":");
@@ -1256,7 +1299,7 @@ const WHO_KIND = { program: "program · fixed rules", agent: "AI agent", you: "y
 function stepCard(iv, s) {
   const G = STEP_GUIDE[s.id] || { title: s.title, what: s.about, why: "", produces: "", next: "" };
   const todo = s.state === "you" ? G.todo
-    : s.state === "failed" ? (G.fail || "See why it stopped, then click “Run again”.")
+    : s.state === "failed" ? stopText(s, G)
     : s.state === "running" ? "Nothing: it is running. You can leave this page."
     : s.state === "todo" ? "Nothing yet: it starts once the steps before it are done." : "Nothing: it is done.";
   const b = [];
@@ -1281,6 +1324,17 @@ function stepCard(iv, s) {
     ${s.lines && s.lines.length ? `<div class="cov">${s.lines.map(esc).join("\n")}</div>` : ""}</article>`;
 }
 const STEP_ORDER = PHASES.flatMap(ph => ph.steps);
+const GONE = '<div class="card"><p>This interview is no longer in the project.</p><button data-nav-go="analysis">Go to Analysis</button></div>';
+// Why a step stopped, in words: another interview's file, a misquote, or something else.
+function stopText(s, G) {
+  const r = s.reason || {};
+  const found = (r.problems || []).length ? `<span class="found">The check found: ${r.problems.map(esc).join(" · ")}</span>`
+    : r.stopped ? `<span class="found">${esc(r.stopped)}</span>` : "";
+  if (r.others && r.others.length && !r.own)
+    return `This interview's work was fine: the check stopped on a problem in ${esc(r.others.join(" and "))}. Open ${r.others.length > 1 ? "them" : "it"} and fix that first, then click “Run again” here.${found}`;
+  if (r.quote) return `The agent misquoted a sentence: it is not word for word in the transcript. Click “Run again”: small slips are now set back to the transcript's words automatically.${found}`;
+  return `See why it stopped, then click “Run again”. If it stops the same way twice, the fix is needed elsewhere first.${found}`;
+}
 
 
 // ---------------------------------------------------------------- screens
@@ -1352,7 +1406,7 @@ const screens = {
     const q = view.step || "";
     const hits = q ? await api(`projects/${view.pid}/search?q=${encodeURIComponent(q)}`) : [];
     const words = q.split(/\s+/).filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    const hl = (t) => words.length ? esc(t).replace(new RegExp(`(${words.join("|")})`, "gi"), "<mark>$1</mark>") : esc(t);
+    const hl = (t) => words.length ? String(t ?? "").split(new RegExp(`(${words.join("|")})`, "gi")).map((x, i) => i % 2 ? `<mark>${esc(x)}</mark>` : esc(x)).join("") : esc(t);
     return `<div class="card"><h2>Search</h2><p class="muted">${hits.length ? `${hits.length} result${hits.length > 1 ? "s" : ""} for “${esc(q)}”` : q ? `Nothing found for “${esc(q)}”.` : "Type in the search box above."}
         ${tip("Searches every finding, quote, theme and reading behind the lines of this project. All the words must appear.")}</p></div>
       ${hits.map(h => `<div class="card"><div class="spread"><div class="muted">${esc(h.kind)} · ${esc(h.where)}</div>
@@ -1363,8 +1417,8 @@ const screens = {
   async review() {
     const q = queue(project);
     if (!q.length) {
-      return `<div class="card"><h2>Review</h2><p>${project.running ? `${spinner} Nothing waits for you right now; the platform is running a step
-        (${esc(project.running.replace(":", ", "))}). You will be told when it is your turn.` : "Nothing waits for you. Add an interview, or open the results."}</p>
+      return `<div class="card"><h2>Review</h2><p>${project.running ? `${spinner} Nothing waits for you right now. Running now: ${esc(runLabel(project).text)}.
+        You will be told when it is your turn.` : "Nothing waits for you. Add an interview, or open the results."}</p>
         <div class="row"><button data-nav-go="project">Inputs</button><button data-nav-go="results">Results</button></div></div>`;
     }
     const cur = q.find(x => x.key === view.step) || q[0];
@@ -1380,7 +1434,7 @@ const screens = {
       : cur.step.id === "confirm-check" ? await screens.check()
       : await screens.final();
     return `<div class="spread" style="margin-bottom:6px"><h2 style="margin:0">Review</h2>
-        <span class="keys"><kbd>⏎</kbd> approve &nbsp; <kbd>→</kbd> next decision</span></div>
+        <span class="keys">${bad || cur.step?.state === "failed" ? "" : "<kbd>⏎</kbd> approve &nbsp; "}<kbd>→</kbd> next decision</span></div>
       <div class="queue" aria-label="Decisions waiting">${q.map((x, i) => `<button class="${x === cur ? "cur" : ""}" data-pick="${esc(x.key)}">${i + 1}. ${esc(x.title)}</button>`).join("")}</div>
       ${body}`;
   },
@@ -1389,7 +1443,7 @@ const screens = {
     const p = project;
     // A new transcript is "pending-N" until its text is extracted and it gets its real name.
     const iv = p.interviews.find(x => x.slug === view.slug) || p.interviews.find(x => `pending-${x.n}` === view.slug);
-    if (!iv) return '<p>This interview no longer exists.</p>';
+    if (!iv) return GONE;
     if (iv.slug !== view.slug) { view.slug = iv.slug; store.set(VIEW_KEY, view); }
     const st = ivStatus(p, iv), phs = phasesOf(p, iv);
     const prof = Object.values(iv.speakers || {}).find(x => x.profile)?.profile;
@@ -1404,7 +1458,7 @@ const screens = {
           <div class="muted">${esc(iv.original)}${iv.words ? ` · ${iv.words.toLocaleString()} words` : ""}
           ${iv.file ? ` · <button class="link" data-go="transcript" data-slug="${esc(iv.slug)}">view text</button>` : ""}
           · Interviewee: ${prof ? esc(profileText(prof)) : "not given yet"}</div></div>
-          ${!p.running || !p.running.startsWith(iv.slug + ":") ? `<button class="small" data-remove="${esc(iv.slug)}">Remove</button>` : ""}</div>
+          ${!p.running || !p.running.startsWith(iv.slug + ":") ? `<button class="link danger" data-remove="${esc(iv.slug)}">Remove this interview</button>` : ""}</div>
       ${(() => { const done = (id) => ((p.steps[iv.slug] || []).find(x => x.id === id) || {}).state === "done";
         const m = p.summaries?.[iv.slug] || {};
         const links = [done("check") && `<button class="small" data-go="check" data-slug="${esc(iv.slug)}">Transcript notes</button>`,
@@ -1427,6 +1481,7 @@ const screens = {
 
   step(stepId) {
     const iv = project.interviews.find(x => x.slug === view.slug);
+    if (!iv) return GONE;
     const st = (iv && project.steps[iv.slug]) || [];
     const i = st.findIndex(x => x.id === (stepId || view.step)), s = st[i];
     if (!s) return '<p>This step no longer exists.</p>';
@@ -1484,12 +1539,12 @@ const screens = {
       <div class="card"><h3>Every step run: logs and prompts</h3>
         ${Object.keys(p.jobs || {}).length ? `<div class="wrap"><table><tr><th>Step</th><th>Status</th><th>Pipeline</th><th>Started</th><th></th></tr>
           ${Object.entries(p.jobs).map(([k, j]) => `<tr><td>${esc(jobName(k))} <code class="muted">${esc(k)}</code></td><td><span class="tag ${STATE[j.status === "failed" ? "failed" : j.status === "running" ? "running" : "done"][0]}">${STATE[j.status === "failed" ? "failed" : j.status === "running" ? "running" : "done"][1]}</span></td>
-            <td class="muted">${esc(j.pipeline_version || "before versions")}</td><td class="muted">${esc((j.started || "").replace("T", " ").slice(0, 16))}</td>
+            <td class="muted">${esc(j.pipeline_version || "before versions")}</td><td class="muted">${esc(j.started ? new Date(j.started).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "")}</td>
             <td><span class="row"><button class="small" data-log="${esc(k)}">What the program did</button>${sent(k) ? `<button class="small" data-prompts="${esc(sent(k))}">Prompt</button>` : ""}</span></td></tr>`).join("")}</table></div>`
           : '<p class="muted">No step has run yet.</p>'}</div>
       <div class="card"><h3>Which version made each result</h3>
         ${prov.length ? `<details><summary>${prov.length} result file(s)</summary><div class="wrap"><table><tr><th>File</th><th>Step</th><th>Pipeline</th><th>Instructions</th><th>Model</th><th>Written</th></tr>
-          ${prov.map(([f, x]) => `<tr><td><code>${esc(f)}</code></td><td>${esc(x.step)}</td><td>${esc(x.pipeline_version)}</td><td>${esc(x.prompt)}</td><td>${esc(x.model)}</td><td class="muted">${esc((x.written || "").replace("T", " ").slice(0, 16))}</td></tr>`).join("")}</table></div></details>`
+          ${prov.map(([f, x]) => `<tr><td><code>${esc(f)}</code></td><td>${esc(x.step)}</td><td>${esc(x.pipeline_version)}</td><td>${esc(x.prompt)}</td><td>${esc(x.model)}</td><td class="muted">${esc(x.written ? new Date(x.written).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "")}</td></tr>`).join("")}</table></div></details>`
           : '<p class="muted">Results made from now on are listed here with the version that made them.</p>'}</div>`;
   },
 
@@ -1507,6 +1562,7 @@ const screens = {
 
   async split() {
     const iv = project.interviews.find(x => x.slug === view.slug);
+    if (!iv) return GONE;
     const d = cache.split ??= await api(`projects/${view.pid}/file/split/${view.slug}`);
     const parts = d.parts.filter(x => x.reader !== "E");
     const total = parts.reduce((n, x) => n + x.words, 0);
@@ -1539,6 +1595,7 @@ const screens = {
 
   speakers() {
     const iv = project.interviews.find(x => x.slug === view.slug);
+    if (!iv) return GONE;
     const labels = (iv.speaker_labels || []).length ? iv.speaker_labels : [{ label: "(no speaker names)", words: iv.words }];
     const profs = project.profiles || [];
     // Not yet answered: pre-filled by the platform, for the researcher to check and confirm.
@@ -1582,7 +1639,7 @@ const screens = {
       : `<div class="item spread" style="flex-wrap:nowrap"><span style="min-width:0"><b>${esc(pr.role)}</b> · ${esc(pr.org_type || "—")} · ${esc(pr.sector || "—")}
           <span class="muted">${usedBy(pr.id).length ? ` · ${esc(usedBy(pr.id).join(", "))}` : " · not used yet"}</span></span>
           <button class="pen" data-edit="prof-${pr.id}" aria-label="Edit this profile" title="Edit">✎</button></div>`).join("");
-    const lines = (xs, none) => xs.length ? `<ol class="plain">${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : `<p class="muted">${none}</p>`;
+    const lines = (xs, none, cls = "") => xs.length ? `<ol class="plain ${cls}">${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : `<p class="muted">${none}</p>`;
     return `${errorBox()}<h2 class="pg">Inputs</h2>
       <p class="lede">What you give the platform: the transcripts (each checked by you), and the context every agent is given, set by you.</p>
       ${dupes.length ? `<div class="card attn"><h3>Already in this project</h3>
@@ -1617,7 +1674,7 @@ const screens = {
           <div><span class="node">2</span><b>Check who speaks</b><span class="muted">Pre-filled for you, in a table. Then Start.</span></div>
           <div><span class="node">3</span><b>Review</b><span class="muted">The agents read; you confirm and approve.</span></div></div>`}
         <div class="drop ${ivs.length ? "compact" : ""}" id="drop" style="margin-top:12px"><p>Drop a transcript or recording here, or
-          <label style="color:var(--accent);cursor:pointer;text-decoration:underline">choose files
+          <label tabindex="0" role="button" data-pick-files="1" style="color:var(--accent);cursor:pointer;text-decoration:underline">choose files
           <input type="file" id="file" multiple hidden accept=".txt,.md,.vtt,.srt,.docx,.pdf,.mp3,.m4a,.wav,.mp4,.webm,.ogg,.mov,.aac,.flac,.mkv"></label></p>
           <p class="muted">Word, PDF, text, video-call export, or an audio/video recording. Each file is one interview.</p></div></section>
       <div class="spread"><h3 class="sec">What every agent is given</h3>
@@ -1629,7 +1686,7 @@ const screens = {
           editor: `<label class="field" for="ed-question">Research question</label><textarea id="ed-question" rows="3">${esc(p.question)}</textarea>` })}
         ${icard({ id: "subs", title: "Sub-questions", src: "you", count: p.sub_questions.length,
           what: `Each finding is tagged with the sub-question it bears on. ${tip("So you can see which questions the interviews answer. Findings already made keep their tags; re-read an interview to tag it with new questions.")}`,
-          body: lines(p.sub_questions.map((x, i) => `SQ${i + 1}. ${x}`), "None: findings are tagged with the research question only."),
+          body: lines(p.sub_questions.map((x, i) => `SQ${i + 1}. ${x}`), "None: findings are tagged with the research question only.", "bare"),
           editor: `<label class="field" for="ed-subs">One sub-question per line</label><textarea id="ed-subs" rows="6">${esc(p.sub_questions.join("\n"))}</textarea>
             <p class="muted">Interviews already read keep their tags; re-read one to apply the new questions.</p>` })}
         ${icard({ id: "priors", title: "Earlier conclusions to test", src: "you", count: p.priors.length,
@@ -1660,6 +1717,7 @@ const screens = {
 
   async check() {
     const iv = project.interviews.find(x => x.slug === view.slug);
+    if (!iv) return GONE;
     const m = cache.meta ??= await api(`projects/${view.pid}/file/meta/${view.slug}`);
     const done = iv.check_approved;
     const list = (key, title, hint) => `<h4>${title}</h4>${hint ? `<p class="muted">${hint}</p>` : ""}
@@ -1669,8 +1727,9 @@ const screens = {
     const needProfile = !done && who && !who.profile;
     const look = [["speaker_corrections", "Lines with the wrong speaker label"], ["meaning_critical_readings", "Sentences that may say the opposite of what was meant"],
                   ["interviewer_talking", "Where an interviewer does the talking"]].filter(([k]) => (m[k] || []).length);
-    return `${errorBox()}${done ? banner("Confirmed. The analysis carries on by itself.", "Status") : ""}
-      <div class="card attn"><div class="spread"><h3 style="margin:0">Worth a look before you confirm</h3>${done ? "" : aiActions(`check:${iv.slug}`, "the transcript check")}</div>
+    return `${errorBox()}${view.screen === "review" ? "" : `<h2 class="pg">${esc(iv.label)} · transcript check</h2>`}
+      ${done ? banner("Confirmed. The analysis carries on by itself.", "Status") : ""}
+      <div class="card attn"><div class="spread"><h3 style="margin:0">${done ? "What was flagged" : "Worth a look before you confirm"}</h3>${done ? "" : aiActions(`check:${iv.slug}`, "the transcript check")}</div>
         ${look.length ? look.map(([k, t]) => `<h4>${t}</h4>${m[k].map((x, i) => `<div class="item spread" style="flex-wrap:nowrap"><span>${esc(x)}</span>${done ? "" : `<button class="small" data-del="${k}" data-i="${i}">✕ Remove this note</button>`}</div>`).join("")}`).join("")
           : '<p class="muted">Nothing unusual: no line under the wrong speaker, no sentence that may say the opposite.</p>'}
         ${needProfile ? `<h4>The interviewee's profile ${kindTag("def")}</h4>
@@ -1682,16 +1741,13 @@ const screens = {
             `<div><label class="field" for="cp-${k}">${t}</label><input type="text" id="cp-${k}" value="${esc(sugg[k] || "")}"></div>`).join("")}</div>`
           : who && who.profile ? `<p class="muted">Interviewee: ${esc(profileText(who.profile))}</p>` : ""}
       </div>
-      <details class="more"><summary>All the agent's notes (remove anything wrong)</summary>
+      <details class="more" id="check-other-notes"><summary>The agent's other notes: who is who, misheard words, weak evidence, names to hide</summary>
       <div class="card"><h2>${esc(iv.label)}: transcript check</h2>
         <p class="muted">Done by an agent ${tip("Every later agent is given these notes. The notes are a default: remove anything wrong. Confirming them is your decision.")}</p>
         <h4>Who is who</h4><div class="wrap"><table><tr><th>Speaker label</th><th>Role</th></tr>
           ${Object.entries(m.speaker_map || {}).map(([k, v]) => `<tr><td>${esc(k)}</td><td><input type="text" data-role="${esc(k)}" value="${esc(v)}" ${done ? "disabled" : ""} aria-label="Role of ${esc(k)}"></td></tr>`).join("")}</table></div>
         <h4>Misheard words</h4>${Object.keys(m.misheard_words || {}).length ? `<div class="pill-list">${Object.entries(m.misheard_words).map(([k, v]) => `<span>${esc(k)} → ${esc(v)}${done ? "" : `<button data-delmap="misheard_words" data-k="${esc(k)}" aria-label="Remove">✕</button>`}</span>`).join("")}</div>` : '<p class="muted">None found.</p>'}
-        ${list("speaker_corrections", "Lines with the wrong speaker label")}
-        ${list("interviewer_talking", "Where an interviewer does the talking")}
         ${list("leading_questions_weak_evidence", "Agreement with an interviewer's idea (weak evidence)")}
-        ${list("meaning_critical_readings", "Sentences that may say the opposite of what was meant")}
         ${list("identifying_terms", "Names that could identify someone", "Removed from every shareable result.")}
       </div></details>
       ${done ? "" : `<div class="row actions"><span class="rule">Remove any wrong note, settle the profile if asked, then confirm.</span>
@@ -1700,6 +1756,7 @@ const screens = {
 
   async codes() {
     const iv = project.interviews.find(x => x.slug === view.slug);
+    if (!iv) return GONE;
     const forms = cache.codes ??= await api(`projects/${view.pid}/file/codes/${view.slug}`);
     return `${errorBox()}<div class="card"><div class="spread"><h2 style="margin:0">${esc(iv.label)}: what the five readers found</h2><span class="row">${srcTag("ai")}${aiActions(`read:${iv.slug}`, "the five readers")}</span></div>
       <p class="muted">Every quote checked word for word. Click ✎ to reword a finding, or Remove one that is wrong: the AI's original is kept. ${tip("The program found each quote in the transcript. Each finding also says how sure its reader is (high, medium, low) and why.")}</p>
@@ -1721,7 +1778,7 @@ const screens = {
             data-text="${esc([c.code, c.description, ...(c.excerpts || [])].join(" ").toLowerCase())}"><div class="spread"><div><b>${etext(`c-${r}-${i}-code`, c.code, { kind: "codes", slug: view.slug, part: r, path: ["codes", i, "code"] }, origOf(c, "code"), false)}</b> <span class="muted">· ${esc(c.valence)} · ${esc(c.sub_question)}${String(c.evidence_strength || "").startsWith("weak") ? " · weak evidence" : ""}</span></div>
           <span class="row">${c.confidence ? `<span class="tag ${CONF[c.confidence] || "grey"}">confidence: ${esc(c.confidence)}</span>` : ""}
           <button class="small" data-fremove="${esc(view.slug)}|${r}|${i}|${c.removed_by_researcher ? 0 : 1}">${c.removed_by_researcher ? "Put back" : "Remove"}</button></span></div>
-          ${c.removed_by_researcher ? '<div class="muted"><b>Removed by you:</b> left out of the themes and the results.</div>' : ""}
+          ${c.removed_by_researcher ? '<div class="muted"><b>Removed by you:</b> left out of the results now, and of the theme list the next time it is built.</div>' : ""}
           ${c.confidence_reason ? `<div class="muted"><b>Why:</b> ${esc(c.confidence_reason)}</div>` : ""}
           <div>${etext(`c-${r}-${i}-d`, c.description, { kind: "codes", slug: view.slug, part: r, path: ["codes", i, "description"] }, origOf(c, "description"))}</div>${(c.excerpts || []).map(x => `<blockquote>“${esc(x)}” <span class="srcl">${esc(c.speaker)}, ${esc(c.timestamp)}</span></blockquote>`).join("")}
           ${c.interpretation ? `<div class="muted"><b>Interpretation:</b> ${etext(`c-${r}-${i}-i`, c.interpretation, { kind: "codes", slug: view.slug, part: r, path: ["codes", i, "interpretation"] }, origOf(c, "interpretation"))}</div>` : ""}</div>`).join("")}</div>`).join("")}
@@ -1735,20 +1792,24 @@ const screens = {
     const idx = Object.fromEntries((cb.themes || []).map((t, i) => [t.id, i]));
     const grouped = new Set((cb.groups || []).flatMap(g => g.themes));
     const theme = (t) => `<div class="item"><div class="row"><span class="muted">${esc(t.id)}</span>
-        <b>${etext(`t-${t.id}-n`, t.name, { kind: "codebook", path: ["themes", idx[t.id], "name"] }, origOf(t, "name"), false)}</b></div>
+        <b>${etext(`t-${t.id}-n`, t.name, { kind: "codebook", path: ["themes", idx[t.id], "name"] }, origOf(t, "name"), false)}</b>
+        <span class="grow"></span>${cb.frozen ? "" : themeAsk === t.id
+          ? `<span class="row"><span class="muted">The list is approved: removing this theme means approving it again, and the interviews are then re-read.</span>
+              <button class="small" data-trm-cancel="1">Cancel</button><button class="small primary" data-trm-go="${esc(t.id)}">Remove it</button></span>`
+          : `<button class="small" data-trm="${esc(t.id)}" title="Take this theme out; its findings become 'not placed'. You can put it back.">Remove</button>`}</div>
         <div>${etext(`t-${t.id}-d`, t.definition, { kind: "codebook", path: ["themes", idx[t.id], "definition"] }, origOf(t, "definition"))}</div>
         <details><summary>${t.sub_themes.length} sub-themes, ${t.sub_themes.reduce((n, s) => n + s.representative_codes.length, 0)} findings</summary>
           ${t.sub_themes.map(s => `<div style="margin:6px 0 0 12px"><b>${esc(s.id)} ${esc(s.name)}</b><div class="muted">${s.representative_codes.map(esc).join(" · ")}</div></div>`).join("")}</details></div>`;
     return `${errorBox()}${done ? banner(st.frozen ? "The theme list is frozen." : "Approved. The re-reads run by themselves.", "Status")
         : ""}
-      <div class="card"><div class="spread"><h2 style="margin:0">Theme list ${tip("A theme is a pattern across what was said, named as a mechanism ('policy exists but nobody has read it'), not a topic. Sub-themes group the findings it rests on; main themes group the themes.")}</h2><span class="row">${srcTag("ai")}${aiActions("codebook", "the theme list")}</span></div>
+      <div class="card"><div class="spread"><h2 style="margin:0">Theme list ${tip("A theme is a pattern across what was said, named as a mechanism ('policy exists but nobody has read it'), not a topic. Sub-themes group the findings it rests on; main themes group the themes.")}</h2><span class="row">${srcTag("ai")}${cb.frozen ? "" : aiActions("codebook", "the theme list")}</span></div>
         <p class="muted">Click ✎ to reword a theme or a main theme: the AI's original is kept, and an approved list stays approved.</p>
         <p class="muted">From every finding of ${st.includes.length} interview(s) · built ${esc(cb.built)} · ${cb.frozen ? "frozen" : st.approved ? "approved" : "waiting for your approval"}</p></div>
       ${done ? "" : (() => { const thin = (cb.themes || []).filter(t => t.sub_themes.reduce((k, x) => k + x.representative_codes.length, 0) < 3);
         const ungrouped = (cb.themes || []).filter(t => !grouped.has(t.id));
         return `<div class="card attn"><h3>Worth a look before you approve</h3>
           ${thin.length ? `<h4>Themes resting on fewer than 3 findings</h4>${thin.map(t => `<div class="item">${esc(t.id)} ${etext(`tw-${t.id}`, t.name, { kind: "codebook", path: ["themes", idx[t.id], "name"] }, origOf(t, "name"), false)}</div>`).join("")}` : ""}
-          ${(cb.unplaced || []).length ? `<h4>Findings placed in no theme</h4>${cb.unplaced.map(u => `<div class="item"><b>${esc(u.code)}</b> <span class="muted">${esc(u.reason)}</span></div>`).join("")}` : ""}
+          ${(cb.unplaced || []).length ? `<h4>Findings placed in no theme</h4><div class="item">${cb.unplaced.length} finding${cb.unplaced.length > 1 ? "s" : ""} <button class="link" data-jump="unplaced">see them below</button></div>` : ""}
           ${ungrouped.length ? `<h4>Themes in no main theme</h4>${ungrouped.map(t => `<div class="item">${esc(t.name)}</div>`).join("")}` : ""}
           ${!thin.length && !(cb.unplaced || []).length && !ungrouped.length ? '<p class="muted">Nothing unusual: every theme rests on 3 findings or more, every finding is placed.</p>' : ""}
           <p class="muted">Then read the main themes below; rename any that do not fit.</p></div>`; })()}
@@ -1756,27 +1817,35 @@ const screens = {
           <h3>${etext(`g-${gi}`, g.name, { kind: "codebook", path: ["groups", gi, "name"] }, origOf(g, "name"), false)}</h3></div>
           <p>${esc(g.tests)}</p>${g.themes.map(id => byId[id]).filter(Boolean).map(theme).join("")}</div>`).join("")}
       ${(cb.themes || []).some(t => !grouped.has(t.id)) ? `<div class="card"><h3>Not in a main theme</h3>${cb.themes.filter(t => !grouped.has(t.id)).map(theme).join("")}</div>` : ""}
-      ${(cb.unplaced || []).length ? `<div class="card"><h3>Findings not placed in a theme</h3>${cb.unplaced.map(u => `<div class="item"><b>${esc(u.code)}</b><div class="muted">${esc(u.reason)}</div></div>`).join("")}</div>` : ""}
+      ${(cb.removed_by_researcher || []).length ? `<div class="card off-card"><h3>Removed by you</h3>
+          <p class="muted">Left out of the analysis; the agents will not recreate them. Their findings are listed under "not placed" below.</p>
+          ${cb.removed_by_researcher.map(r => `<div class="item spread"><span><b>${esc(r.theme.name)}</b> <span class="muted">· ${esc(r.theme.definition || "")}</span></span>
+            ${cb.frozen ? "" : `<button class="small" data-trs="${esc(r.theme.id)}">Put back</button>`}</div>`).join("")}</div>` : ""}
+      ${(cb.unplaced || []).length ? `<div class="card" id="sec-unplaced"><h3>Findings not placed in a theme</h3>${cb.unplaced.map(u => `<div class="item"><b>${esc(u.code)}</b><div class="muted">${esc(u.reason)}</div></div>`).join("")}</div>` : ""}
       ${done ? "" : `<div class="row actions"><span class="rule">Reword any wrong theme (✎), then approve.</span>
-        <label class="opt"><input type="checkbox" id="freeze"> Freeze the list <span class="muted">(final: later interviews no longer add themes)</span></label>
+        <label class="opt freeze"><input type="checkbox" id="freeze"> <b>Freeze the list</b> <span class="muted">(final: later interviews no longer add themes. Not frozen: each new interview extends the list, and every interview is re-read after you approve it again)</span></label>
         <button class="primary" data-act="codebook-approve">Approve</button></div>`}`;
   },
 
   async final() {
     const iv = project.interviews.find(x => x.slug === view.slug);
+    if (!iv) return GONE;
     const d = cache.final ??= await api(`projects/${view.pid}/file/final/${view.slug}`);
     const r = d.recode || {}, l = d.latent || {}, done = iv.final_approved;
     const q = (x) => x && x.text ? `<blockquote>“${esc(x.text)}”${x.speaker ? ` (${esc(x.speaker)}` : " ("}${x.timestamp ? `, ${esc(x.timestamp)}` : ""})</blockquote>` : "";
     const LV = { primary: ["ok", "central"], secondary: ["plain", "present"], tangential: ["grey", "minor"], absent: ["grey", "absent"] };
-    return `${errorBox()}${done ? banner("Approved. This interview is part of the findings report.", "Status") : ""}
+    return `${errorBox()}${view.screen === "review" ? "" : `<h2 class="pg">${esc(iv.label)} · re-read and behind the lines</h2>`}
+      ${done ? banner("Approved. This interview is part of the findings report.", "Status") : ""}
       ${(() => { const fixes = r.corrections_to_earlier_coding || [], misses = r.themes_the_codebook_misses || [];
         const lowr = (l.readings || []).filter(x => x.confidence === "low");
         const against = (l.desk_research_check || []).filter(x => ["complicates", "contradicts"].includes(x.does_this_interview_support_it));
-        return `<div class="card attn"><div class="spread"><h3 style="margin:0">Worth a look before you approve</h3>
+        return `<div class="card attn"><div class="spread"><h3 style="margin:0">${done ? "What was flagged" : "Worth a look before you approve"}</h3>
             <span class="row"><span class="muted">Re-read:</span>${aiActions(`reread:${iv.slug}`, "the re-read")}
               <span class="muted">Behind the lines:</span>${aiActions(`latent:${iv.slug}`, "behind the lines")}</span></div>
           ${fixes.length ? `<h4>What the re-read corrected in the first reading</h4>${fixes.map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("")}` : ""}
-          ${misses.length ? `<h4>What the theme list misses</h4>${misses.map(x => `<div class="item">${esc(x.description)}</div>`).join("")}` : ""}
+          ${misses.length ? `<h4>Topics in this interview that no theme covers</h4>${misses.map(x => `<div class="item">${esc(x.description)}</div>`).join("")}
+            <div class="row"><span class="muted"><b>What you can do:</b> nothing, if it is minor; if it matters, ask for a theme that covers it with ✦ Refine on the theme list.</span>
+              <button class="small" data-go="codebook">Open the theme list</button></div>` : ""}
           ${against.length ? `<h4>Earlier conclusions this interview complicates or contradicts</h4>${against.map(x => `<div class="item"><b>${esc(x.prior_conclusion)}</b> <span class="tag plain">${esc(x.does_this_interview_support_it)}</span><div class="muted">${esc(x.note)}</div></div>`).join("")}` : ""}
           ${lowr.length ? `<h4>Readings behind the lines with low confidence</h4>${lowr.map(x => { const i = (l.readings || []).indexOf(x);
             return `<div class="item">${etext(`lw-${i}`, x.reading || "", { kind: "latent", slug: iv.slug, path: ["readings", i, "reading"] }, origOf(x, "reading"))}</div>`; }).join("")}` : ""}
@@ -1789,7 +1858,7 @@ const screens = {
         ${(r.theme_codings || []).map((c, i) => `<div class="item"><div class="spread"><b>${esc(c.theme_id)} ${esc(c.theme_name)}</b>
           <span class="tag ${(LV[c.relevance] || ["grey"])[0]}">${(LV[c.relevance] || ["", c.relevance])[1]}</span></div>
           <div>${etext(`r-${i}`, c.summary || "", { kind: "recode", slug: iv.slug, path: ["theme_codings", i, "summary"] }, origOf(c, "summary"))}</div>${q(c.best_quote)}<div class="muted">Fit with the theme list: ${esc(c.codebook_fit)}. ${esc(c.fit_note)}</div></div>`).join("")}
-        <h4>Themes the list misses</h4>${(r.themes_the_codebook_misses || []).map(x => `<div class="item">${esc(x.description)}</div>`).join("") || '<p class="muted">None.</p>'}
+        <h4>Topics in this interview that no theme covers</h4>${(r.themes_the_codebook_misses || []).map(x => `<div class="item">${esc(x.description)}</div>`).join("") || '<p class="muted">None.</p>'}
         <h4>What the re-read corrected in the first reading</h4>${(r.corrections_to_earlier_coding || []).map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("") || '<p class="muted">None.</p>'}</div>
       <div class="card"><div class="spread"><h2 style="margin:0">Behind the lines</h2>${srcTag("ai")}</div>
         <p class="muted">Done by an agent, checked by the program.</p>
@@ -1823,7 +1892,8 @@ const screens = {
     const d = c.exists ? (cache.cross ??= await api(`projects/${view.pid}/file/cross`)) : null;
     const label = Object.fromEntries(p.interviews.map(iv => [iv.slug, iv.label]));
     const names = {};
-    if (p.codebook.exists) { const cb = cache.cbx ??= await api(`projects/${view.pid}/file/codebook`); (cb.themes || []).forEach(t => { names[t.id] = t.name; }); }
+    if (p.codebook.exists) { const cb = cache.cbx ??= await api(`projects/${view.pid}/file/codebook`); (cb.themes || []).forEach(t => { names[t.id] = t.name; });
+      (cb.removed_by_researcher || []).forEach(r => { names[r.theme.id] ??= `${r.theme.name} (removed)`; }); }
     const R = p.reports.length ? (cache.rt ??= await api(`projects/${view.pid}/file/report-text`).catch(() => ({}))) : null;
     const Q = cache.quotes ??= await api(`projects/${view.pid}/quotes`);
     const who = (xs) => (xs || []).map(x => esc(label[x] || x)).join(", ");
@@ -1845,7 +1915,7 @@ const screens = {
         <button data-jump="export">Export</button></nav>
 
       <section class="card" id="sec-cross"><div class="spread"><h3 style="margin:0">Cross-analysis</h3><span class="row">${d ? srcTag("ai") : ""}${d && ready ? aiActions("cross", "the cross-analysis") : ""}</span></div>
-        <p class="what">What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved, and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
+        <p class="what"><b>Your working comparison.</b> What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved, and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
         ${!ready ? `<div class="banner"><b>Next step:</b> approve at least two interviews (${c.approved.length} so far). It then runs by itself.</div>`
           : p.running === "cross" ? `<p>${spinner} Running. You can leave this page.</p>`
           : old ? `<div class="banner"><b>Your inputs changed after it was made.</b> <button class="small" data-act="cross-run" ${p.running ? "disabled" : ""}>Run it again</button></div>`
@@ -1866,11 +1936,12 @@ const screens = {
       <section class="card" id="sec-final"><div class="spread"><h3 style="margin:0">Findings report: the final analysis</h3>
           <span class="row">${R ? srcTag("ai") : ""}${p.running === "report" ? `<span class="tag plain">${spinner} Building</span>` : rjob.status === "failed" ? '<span class="tag bad">Stopped</span> <button class="link" data-log="report">Why it stopped</button>' : ""}
           <button class="${R ? "" : "primary"}" data-act="report" ${p.running || !p.interviews.some(iv => iv.final_approved) ? "disabled" : ""}>${R ? "Build a new version" : "Build the findings report"}</button></span></div>
-        <p class="what">Written by an agent from the approved interviews and the theme list, then built by the program into Word. A shareable copy, with no quotes and no names, is made at the same time and refused if a name is left.</p>
+        <p class="what"><b>The document you share.</b> Written by an agent from the approved interviews, the theme list and the cross-analysis, then built by the program into Word. A shareable copy is made at the same time: no quotes, and the names the transcript checks found are replaced. Read it once before sharing.</p>
         ${R && R.title ? `<h4>${esc(R.title)}</h4><h4>Key takeaways</h4>${pairs(R.takeaways)}
+          ${(R.comparison || []).length ? `<h4>Comparing the interviews</h4>${pairs(R.comparison)}` : ""}
           <details><summary>Theme by theme, interview by interview</summary>${Object.entries(R.themes || {}).map(([tid, t]) => `<div class="item"><b>${esc(names[tid] || tid)}</b><p>${esc(t.what || "")}</p>
             ${Object.entries(t).filter(([k]) => k !== "what").map(([sl, txt]) => `<div><span class="muted">${esc(label[sl] || sl)}:</span> ${esc(txt)}</div>`).join("")}</div>`).join("")}</details>
-          <details><summary>Limits</summary>${pairs(R.limits)}</details>` : '<p class="muted">Not built yet. It needs at least one approved interview.</p>'}
+          <details><summary>Limits</summary>${pairs(R.limits)}</details>` : `<p class="muted">${p.interviews.some(iv => iv.final_approved) ? "Not built yet: click “Build the findings report”." : "Not built yet. It needs at least one approved interview."}</p>`}
         ${reportLinks(p, true)}</section>
 
       <section class="card" id="sec-quotes"><h3>Quote check</h3>
@@ -1895,7 +1966,7 @@ const screens = {
 
       <section class="card" id="sec-export"><h3>Export</h3>
         <div class="spread"><div><b>Everything, in one file</b><div class="muted">Every report and table, full and shareable side by side, in a zip file.</div></div>
-          <button class="primary" data-act="download-all">Download everything</button></div>
+          <button class="${p.reports.length ? "primary" : ""}" data-act="download-all">Download everything</button></div>
         <div class="grid" style="margin-top:12px">
           <div><h4>Findings report (Word)</h4>${p.reports.length ? reportLinks(p, false) : '<p class="muted">Not built yet.</p>'}</div>
           <div><h4>One report per interview (Word)</h4>
@@ -1959,16 +2030,41 @@ async function render() {
   // The page redraws itself every few seconds while a step runs: keep what the researcher opened or closed.
   const key = `${name}|${view.slug || ""}`;
   const kept = key === lastRendered ? Object.fromEntries([...app.querySelectorAll("details[id]")].map(d => [d.id, d.open])) : {};
-  const typed = key === lastRendered ? Object.fromEntries([...app.querySelectorAll("textarea[id], input[type=text][id]")].map(e => [e.id, e.value])) : {};
+  const keptAll = key === lastRendered ? [...app.querySelectorAll("details:not([id])")].map(d => d.open) : null;
+  const ctlKey = (el) => el.id || [...el.attributes].filter(a => a.name.startsWith("data-") || a.name === "name").map(a => `${a.name}=${a.value}`).join("|")
+    + (el.type === "radio" ? `|v=${el.value}` : "");
+  const ctls = key === lastRendered ? new Map([...app.querySelectorAll("input, select, textarea")].filter(el => el.type !== "file").map(el =>
+    [ctlKey(el), el.type === "checkbox" || el.type === "radio" ? { checked: el.checked }
+      : { value: el.value, sel: el === document.activeElement && "selectionStart" in el ? [el.selectionStart, el.selectionEnd] : null }])) : null;
+  // Long boxes (a live log) keep their scroll place; at the bottom, they follow the newest lines.
+  const scrolls = key === lastRendered ? [...app.querySelectorAll("pre.log, .ctx")].map(e => ({ top: e.scrollTop, end: e.scrollTop + e.clientHeight >= e.scrollHeight - 4 })) : null;
+  const pageY = window.scrollY;
   const focus = key === lastRendered ? document.activeElement?.id : "";
   const framed = project && !["home", "new"].includes(name);
   try { app.innerHTML = bar + (framed ? stepper(project) : "") + await screens[name]() + (framed ? footer(project) : ""); }
   catch (e) { app.innerHTML = `${bar}<div class="error">${esc(e.message)}</div>`; }
   for (const [id, open] of Object.entries(kept)) { const d = document.getElementById(id); if (d) d.open = open; }
-  for (const [id, v] of Object.entries(typed)) { const e = document.getElementById(id); if (e) e.value = v; }
+  if (keptAll) { const all = [...app.querySelectorAll("details:not([id])")]; if (all.length === keptAll.length) all.forEach((d, i) => { d.open = keptAll[i]; }); }
+  let selection = null;
+  if (ctls) [...app.querySelectorAll("input, select, textarea")].forEach(el => {
+    const w = ctls.get(ctlKey(el));
+    if (!w) return;
+    if ("checked" in w) { el.checked = w.checked; return; }
+    if (el.value !== w.value) { el.value = w.value; if (el.dataset.setupWho) el.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (w.sel) selection = [el, w.sel];
+  });
   if (focus) document.getElementById(focus)?.focus();
+  if (selection) { try { selection[0].focus(); selection[0].setSelectionRange(...selection[1]); } catch {} }
+  if (document.getElementById("f-text")) applyFilters();
+  if (scrolls) {
+    const boxes = [...app.querySelectorAll("pre.log, .ctx")];
+    if (boxes.length === scrolls.length) boxes.forEach((e, i) => { e.scrollTop = scrolls[i].end && name === "log" ? e.scrollHeight : scrolls[i].top; });
+    window.scrollTo(0, pageY);
+  }
   const nb = app.querySelector(".next-act .primary");  // one primary action per screen
   if (nb && [...app.querySelectorAll(".primary")].some(x => x !== nb && !x.closest(".stepper"))) nb.closest(".next-act").remove();
+  // Arriving in Review, nothing keeps the focus, so Enter approves and → moves on (and no button is pressed by mistake).
+  if (name === "review" && key !== lastRendered && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   if (key !== lastRendered) {  // opened at a section: Results › Quotes, Results › Cross-analysis
     const anchor = name === "cross" ? "cross" : name === "results" ? view.step : "";
     if (anchor) document.getElementById("sec-" + anchor)?.scrollIntoView({ block: "start" });
@@ -1988,13 +2084,16 @@ function readFile(file) {
 }
 let dupes = [];  // files already in the project, waiting for "Add it anyway" or "Skip"
 async function upload(list, force = false) {
+  const errs = [];
+  errorMsg = "";
   for (const f of list) {
     note(`Adding ${f.name}…`);
     try { project = await api(`projects/${view.pid}/interviews`, { filename: f.name, data: await readFile(f), force }); }
-    catch (e) { if (e.data?.duplicate) dupes.push({ file: f, msg: e.message }); else errorMsg = `${f.name}: ${e.message}`; }
+    catch (e) { if (e.data?.duplicate) dupes.push({ file: f, msg: e.message }); else errs.push(`${f.name}: ${e.message}`); }
   }
   note("All changes saved");
-  return view.screen === "project" ? load() : go("project");  // the set-up table is on the overview
+  await (view.screen === "project" ? load() : go("project"));  // the set-up table is on the overview
+  if (errs.length) showError(errs.join("\n"));  // every file that could not be added, not just the last
 }
 async function saveMeta(change) {
   change(cache.meta);
@@ -2008,6 +2107,7 @@ async function act(name) {
     switch (name) {
       case "home": return go("home");
       case "start-all": {
+        askNotify();  // so the platform can tell you when a decision waits, while you do something else
         for (const sel of document.querySelectorAll("[data-setup-who]")) {
           const sl = sel.dataset.setupWho, iv = project.interviews.find(x => x.slug === sl);
           const labs = (iv.speaker_labels || []).length ? iv.speaker_labels : [{ label: "(no speaker names)" }];
@@ -2046,6 +2146,10 @@ async function act(name) {
       case "new": return go("new");
       case "back": return back();
       case "create": {
+        if (projects.some(x => x.name.trim().toLowerCase() === val("pname").trim().toLowerCase()) && confirmSameName !== val("pname").trim()) {
+          confirmSameName = val("pname").trim();
+          return showError(`A project called “${confirmSameName}” already exists. Click Create project again to make a second one with the same name.`);
+        }
         note("Setting up the project…");
         const p = await api("projects", { name: val("pname"), question: val("pq"), sub_questions: val("psubs"), priors: val("ppriors"),
                                           profiles: draftProfiles() });
@@ -2097,18 +2201,30 @@ function afterDecision(slug) {
 }
 // Removing takes one click; it only really happens after 8 seconds, unless "Undo" is pressed.
 const pendingRemoval = new Set();
+const pendingPid = {};
+window.addEventListener("pagehide", () => {
+  pendingRemoval.forEach(slug => fetch(`/api/projects/${pendingPid[slug]}/interviews/${slug}/remove`,
+    { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: "{}" }));
+});
+const pendingTimer = {}, pendingLabel = {};
+function showUndo() {  // one line per removal still waiting, each with its own Undo
+  const toast = document.getElementById("toast");
+  toast.innerHTML = [...pendingRemoval].map(sl => `<div>${esc(pendingLabel[sl])} removed <button type="button" data-undo="${esc(sl)}">Undo</button></div>`).join("");
+  toast.hidden = !pendingRemoval.size;
+}
+document.getElementById("toast").addEventListener("click", (e) => {
+  const sl = e.target.closest("[data-undo]")?.dataset.undo; if (!sl) return;
+  clearTimeout(pendingTimer[sl]); pendingRemoval.delete(sl); showUndo(); note("Kept"); render();
+});
 function removeWithUndo(slug) {
   const pid = view.pid, iv = project.interviews.find(x => x.slug === slug);
-  pendingRemoval.add(slug);
-  const toast = document.getElementById("toast");
-  toast.innerHTML = `${esc(iv ? iv.label : "Interview")} removed <button type="button" id="undo">Undo</button>`;
-  toast.hidden = false;
-  const timer = setTimeout(async () => {
-    toast.hidden = true; pendingRemoval.delete(slug);
+  pendingRemoval.add(slug); pendingPid[slug] = pid; pendingLabel[slug] = iv ? iv.label : "Interview";
+  pendingTimer[slug] = setTimeout(async () => {
+    pendingRemoval.delete(slug); showUndo();
     try { await api(`projects/${pid}/interviews/${slug}/remove`, {}); } catch (err) { showError(err.message); }
     if (view.pid === pid) load();
   }, 8000);
-  document.getElementById("undo").onclick = () => { clearTimeout(timer); pendingRemoval.delete(slug); toast.hidden = true; note("Kept"); render(); };
+  showUndo();
   if (view.screen === "interview" && view.slug === slug) return go("project");
   render();
 }
@@ -2133,11 +2249,17 @@ async function download() {
 }
 
 document.getElementById("home-link").addEventListener("click", () => go("home"));
+document.getElementById("menu-toggle").addEventListener("click", (e) => {
+  const open = document.body.classList.toggle("menu-open");
+  e.currentTarget.setAttribute("aria-expanded", String(open));
+});
+document.getElementById("side").addEventListener("click", (e) => { if (e.target.closest("button")) document.body.classList.remove("menu-open"); });
 document.addEventListener("keydown", (e) => {
   if (e.target.id === "psearch" && e.key === "Enter" && e.target.value.trim()) go("search", { step: e.target.value.trim() });
 });
 document.addEventListener("keydown", (e) => {
-  if (view.screen !== "review" || e.altKey || e.ctrlKey || e.metaKey || ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+  if (view.screen !== "review" || e.altKey || e.ctrlKey || e.metaKey || ["INPUT", "TEXTAREA", "SELECT", "BUTTON", "SUMMARY", "A", "LABEL"].includes(e.target.tagName)
+      || e.target.closest(".refine, #side")) return;
   if (e.key === "Enter") { const b = document.querySelector(".row.actions button.primary:not([disabled])"); if (b) { e.preventDefault(); b.click(); } }
   if (e.key === "ArrowRight") {
     const q = queue(project), i = q.findIndex(x => x.key === view.step);
@@ -2163,9 +2285,16 @@ document.getElementById("side").addEventListener("click", (e) => {
   if (b.dataset.step) return go("step", { slug: b.dataset.slug, step: b.dataset.step });
   if (b.dataset.iv) return go("interview", { slug: b.dataset.iv });
 });
+let clickBusy = false;
 app.addEventListener("click", async (e) => {
   const b = e.target.closest("button"); if (!b || b.disabled) return;
+  if (clickBusy) return;  // a double-click does not start a step twice, nor make two projects
+  clickBusy = true;
+  try { await onClick(e, b); } finally { clickBusy = false; }
+});
+async function onClick(e, b) {
   const d = b.dataset;
+  errorMsg = "";  // an old error does not outlive the next action
   if (d.edit) { editing.add(d.edit); await render(); document.querySelector(`#ed-${CSS.escape(d.edit)}, #card-${CSS.escape(d.edit)} textarea, #card-${CSS.escape(d.edit)} input`)?.focus(); return; }
   if (d.cancel) { editing.delete(d.cancel); return render(); }
   if (d.save) return saveCard(d.save);
@@ -2177,6 +2306,18 @@ app.addEventListener("click", async (e) => {
   }
   if (d.regen) { regenAsk = d.regen; return render(); }
   if (d.regenCancel) { regenAsk = null; return render(); }
+  if (d.trm || d.trmGo) {
+    const id = d.trm || d.trmGo;
+    if (d.trm && project.codebook.approved) { themeAsk = id; return render(); }
+    themeAsk = null;
+    try { await api(`projects/${view.pid}/codebook/remove-theme`, { id }); cache = {}; note("Theme removed · you can put it back"); return load(); }
+    catch (err) { return showError(err.message); }
+  }
+  if (d.trmCancel) { themeAsk = null; return render(); }
+  if (d.trs) {
+    try { await api(`projects/${view.pid}/codebook/restore-theme`, { id: d.trs }); cache = {}; note("Theme put back"); return load(); }
+    catch (err) { return showError(err.message); }
+  }
   if (d.regenGo) { regenAsk = null; return runAgain(d.regenGo, ""); }
   if (d.refine) { refining = d.refine; await render(); document.getElementById("rf-text")?.focus(); return; }
   if (d.refineCancel) { refining = null; return render(); }
@@ -2210,7 +2351,7 @@ app.addEventListener("click", async (e) => {
   if (d.remove) return removeWithUndo(d.remove);
   if (d.del) return saveMeta(m => { m[d.del].splice(+d.i, 1); }).then(render);
   if (d.delmap) return saveMeta(m => { delete m[d.delmap][d.k]; }).then(render);
-});
+}
 app.addEventListener("change", async (e) => {
   if (e.target.id === "pfrom") {  // fill the form from an existing project (or empty it again); everything stays editable
     try {
@@ -2271,6 +2412,13 @@ function applyFilters() {
 }
 app.addEventListener("input", (e) => { if (e.target.id === "f-text") applyFilters(); });
 app.addEventListener("change", (e) => { if (["f-conf", "f-reader", "f-sq"].includes(e.target.id)) applyFilters(); });
+window.addEventListener("dragover", (e) => { e.preventDefault(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  if (e.target.dataset?.pickFiles) { e.preventDefault(); document.getElementById("file")?.click(); }
+  if (e.target.id === "home-link" && e.key === "Enter") go("home");
+});
+window.addEventListener("drop", (e) => { if (!e.target.closest || !e.target.closest("#drop")) e.preventDefault(); });
 app.addEventListener("dragover", (e) => { const d = e.target.closest("#drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
 app.addEventListener("dragleave", (e) => { e.target.closest("#drop")?.classList.remove("over"); });
 app.addEventListener("drop", (e) => { if (e.target.closest("#drop")) { e.preventDefault(); upload([...e.dataTransfer.files]); } });
