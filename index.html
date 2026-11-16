@@ -119,6 +119,7 @@
   @media (max-height: 760px) { .row.actions { position: static; } }
   .grid.stack { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .grid.stack textarea { width: 100%; }
+  .add-term input { flex: 1 1 240px; width: auto; }
   .then { margin: 10px 0 0; } .then b { color: var(--muted); font-weight: 600; }
   .legend { font-size: 13px; margin: -4px 0 6px; }
   .icard.wide { grid-column: 1 / -1; } .icard.wide .value { font-size: 17px; }
@@ -446,8 +447,14 @@
   }
   function advance(p) {
     if (p.running) return;
-    const key = nextJob(p);
+    const q = (p.queued || []).shift();  // asked for while another step ran: it comes first
+    const key = q ? q[0] : nextJob(p);
     if (key) start(p, key);
+  }
+  // As app.queue_job: a Refine or Regenerate asked for while another step runs waits its turn.
+  function runOrQueue(p, key, note) {
+    if (!p.running) return start(p, key);
+    p.queued = (p.queued || []).filter(q => q[0] !== key).concat([[key, note ? [`--note=${note}`] : []]]);
   }
   function start(p, key) {
     p.running = key;
@@ -549,7 +556,7 @@
     const cb = p.cb;
     const out = {
       id: p.id, name: p.name, question: p.question, sub_questions: p.sub_questions, priors: p.priors, profiles: p.profiles,
-      interviews: p.interviews.map(iv => ({ ...iv })), jobs: p.jobs, running: p.running, updated: p.updated, created: p.created,
+      interviews: p.interviews.map(iv => ({ ...iv })), jobs: p.jobs, running: p.running, queued: p.queued || [], updated: p.updated, created: p.created,
       context_changed_at: p.context_changed_at, codebook_approved_at: 0,
       steps: Object.fromEntries(p.interviews.map(iv => [iv.slug, stepsFor(p, iv)])),
       codebook: { exists: !!cb, approved: !!(cb && cb.approved), frozen: !!(cb && cb.frozen), themes: cb ? cb.data.themes.length : 0, includes: cb ? cb.includes : [] },
@@ -816,18 +823,18 @@
           case "reopen-final": iv.final_approved = false; break;
           case "rerun": {
             const step = b.step;
-            if (b.note && p.running) throw err("Another step is running. Refine this one once it has finished.");
             if (b.note) (p.notes ||= {})[`${iv.slug}:${step}`] = b.note; else delete (p.notes || {})[`${iv.slug}:${step}`];
             if (step === "check") Object.assign(iv, { checkDone: false, check_approved: false });
             if (step === "read") { iv.readDone = false; if (p.cb && !p.cb.frozen) p.cb.includes = p.cb.includes.filter(x => x !== iv.slug); }
             if (step === "reread") iv.rereadDone = false;
             if (step === "latent") iv.latentDone = false;
             iv.final_approved = false; delete p.jobs[`${iv.slug}:${step}`];
-            if (!p.running) start(p, `${iv.slug}:${step}`);
+            runOrQueue(p, `${iv.slug}:${step}`, b.note);
             break;
           }
           case "remove":
             p.interviews = p.interviews.filter(x => x !== iv); delete p.data[iv.slug];
+            p.queued = (p.queued || []).filter(q => !q[0].startsWith(iv.slug + ":"));
             Object.keys(p.jobs).filter(k => k.startsWith(iv.slug + ":")).forEach(k => delete p.jobs[k]);
             if (p.cb) p.cb.includes = p.cb.includes.filter(x => x !== iv.slug);
             break;
@@ -843,7 +850,7 @@
         } else if (action === "approve") { p.cb.approved = true; p.cb.frozen = !!b.freeze; }
         else if (action === "rerun") {
           if (b.note) (p.notes ||= {}).codebook = b.note;
-          delete p.jobs.codebook; if (!p.running) start(p, "codebook"); save(); return json(view(p));
+          delete p.jobs.codebook; runOrQueue(p, "codebook", b.note); save(); return json(view(p));
         }
         else if (action === "remove-theme" || action === "restore-theme") themeOutOrBack(p, b.id, action === "remove-theme");
         break;
@@ -851,7 +858,7 @@
       case "report": if (!p.running) start(p, "report"); break;
       case "cross": {
         if (p.interviews.filter(iv => iv.final_approved).length < 2) throw err("The cross-analysis needs at least two approved interviews.");
-        delete p.jobs.cross; if (!p.running) start(p, "cross"); break;
+        delete p.jobs.cross; runOrQueue(p, "cross", b.note); break;
       }
       case "profiles": {
         const f = { role: String(b.role || "").trim(), org_type: String(b.org_type || "").trim(), sector: String(b.sector || "").trim() };
@@ -1087,7 +1094,7 @@ function phaseSummary(id, m) {
     case "prepare": return m.speakers ? `Text extracted · ${n(m.speakers, "speaker", "speakers")} · ${n(m.misheard, "misheard word", "misheard words")} · ${n(m.corrections, "label correction", "label corrections")} · ${n(m.names, "name", "names")} to hide` : "";
     case "read": return m.findings ? `${n(m.findings, "finding", "findings")} (${m.low} low confidence) · every quote checked word for word: ${m.quotes}` : "";
     case "themes": return project.codebook.exists ? `${project.codebook.themes} themes in the project's shared list` : "";
-    case "interpret": return m.themes ? `${m.central} of ${m.themes} themes central · ${n(m.fixes, "correction", "corrections")} to the first reading · ${n(m.readings, "reading", "readings")} behind the lines (${m.low_readings} low confidence) · ${n(m.silences, "silence", "silences")}` : "";
+    case "interpret": return m.themes ? `${m.central} of ${m.themes} themes central · ${n(m.fixes, "note", "notes")} where the re-read disagrees with the first reading · ${n(m.readings, "reading", "readings")} behind the lines (${m.low_readings} low confidence) · ${n(m.silences, "silence", "silences")}` : "";
     default: return "";
   }
 }
@@ -1273,11 +1280,14 @@ function aiActions(key, label) {
       ${tip("Your instruction is added at the end of the agent's instructions for this one run, and kept with its prompt under Technical details.")}</label>
     <textarea id="rf-text" rows="2" placeholder="e.g. Pay more attention to how staff describe their doubts"></textarea>
     <div class="row"><button class="small" data-refine-cancel="1">Cancel</button><button class="small primary" data-refine-go="${esc(key)}">Run it with this instruction</button></div></div>`;
-  if (regenAsk === key) return `<div class="refine"><b>Run ${esc(label)} again?</b> It takes a few minutes. The current version is kept in backups;
+  if (regenAsk === key) return `<div class="refine"><b>Run ${esc(label)} again?</b> It takes a few minutes${project.running ? ", once the step running now has finished" : ""}. The current version is kept in backups;
       what it produces must then be approved again.
     <div class="row" style="margin-top:6px"><button class="small" data-regen-cancel="1">Cancel</button><button class="small primary" data-regen-go="${esc(key)}">Yes, run it again</button></div></div>`;
-  // While an agent works, nothing else can run: say so instead of showing buttons that do nothing.
-  if (project.running) return `<span class="ai-wait">${spinner} Regenerate / Refine: available once the step running now has finished</span>`;
+  // The AI does one step at a time: asked for while another step runs, it waits its turn (and says so).
+  const [st, sl] = key.split(":"), jobKey = sl ? `${sl}:${st}` : st;
+  if (project.running === jobKey) return `<span class="ai-wait">${spinner} Running now</span>`;
+  const waiting = (project.queued || []).find(q => q[0] === jobKey);
+  if (waiting) return `<span class="ai-wait">${spinner} Queued${waiting[1].some(a => String(a).startsWith("--note=")) ? " with your instruction" : ""}: starts once the step running now has finished</span>`;
   return `<span class="row ai-act"><button class="small" data-regen="${esc(key)}" title="Run ${esc(label)} again; the current version is kept in backups">↻ Regenerate</button>
     <button class="small" data-refine="${esc(key)}" title="Run ${esc(label)} again with an instruction of yours">✦ Refine…</button></span>`;
 }
@@ -1287,8 +1297,10 @@ async function runAgain(key, instruction) {
     if (step === "codebook") await api(`projects/${view.pid}/codebook/rerun`, { note: instruction });
     else if (step === "cross") await api(`projects/${view.pid}/cross`, { note: instruction });
     else await api(`projects/${view.pid}/interviews/${slug}/rerun`, { step, note: instruction, fresh: true });
+    const later = !!project.running;
     refining = null; cache = {};
-    note(instruction ? "Running again with your instruction" : "Running again · the earlier version is kept");
+    note(later ? "Queued: it starts once the step running now has finished"
+      : instruction ? "Running again with your instruction" : "Running again · the earlier version is kept");
     return load();
   } catch (e) { return showError(e.message); }
 }
@@ -1747,7 +1759,7 @@ const screens = {
           <input type="file" id="file" multiple hidden accept=".txt,.md,.vtt,.srt,.docx,.pdf,.mp3,.m4a,.wav,.mp4,.webm,.ogg,.mov,.aac,.flac,.mkv"></label></p>
           <p class="muted">Word, PDF, text, video-call export, or an audio/video recording. Each file is one interview.</p></div></section>
       <div class="spread"><h3 class="sec">What every agent is given</h3>
-        ${crossOld ? `<span class="row"><span class="tag warn">The cross-analysis was made before your last change</span><button class="small" data-act="cross-run" ${p.running ? "disabled" : ""}>Run it again</button></span>` : ""}</div>
+        ${crossOld ? `<span class="row"><span class="tag warn">The cross-analysis was made before your last change</span><button class="small" data-act="cross-run">Run it again</button></span>` : ""}</div>
       <div class="cards2">
         ${icard({ id: "question", title: "Research question", src: "you",
           what: `Every agent reads it first. A change makes a new version of the agents' instructions. ${tip("Steps already done keep the version they used; the cross-analysis is framed by the current one.")}`,
@@ -1817,7 +1829,9 @@ const screens = {
           ${Object.entries(m.speaker_map || {}).map(([k, v]) => `<tr><td>${esc(k)}</td><td><input type="text" data-role="${esc(k)}" value="${esc(v)}" ${done ? "disabled" : ""} aria-label="Role of ${esc(k)}"></td></tr>`).join("")}</table></div>
         <h4>Misheard words</h4>${Object.keys(m.misheard_words || {}).length ? `<div class="pill-list">${Object.entries(m.misheard_words).map(([k, v]) => `<span>${esc(k)} → ${esc(v)}${done ? "" : `<button data-delmap="misheard_words" data-k="${esc(k)}" aria-label="Remove">✕</button>`}</span>`).join("")}</div>` : '<p class="muted">None found.</p>'}
         ${list("leading_questions_weak_evidence", "Agreement with an interviewer's idea (weak evidence)")}
-        ${list("identifying_terms", "Names that could identify someone", "Removed from every shareable result.")}
+        ${list("identifying_terms", "Names that could identify someone", "Hidden as [name] in every shareable result. Missing one? Add it: a job title, a town, a nickname, a spelling variant.")}
+        <div class="row add-term"><input type="text" id="add-term" placeholder="e.g. Head of Data, a town, a nickname" aria-label="A name to hide">
+          <button class="small" data-act="add-term">Add to the names to hide</button></div>
       </div></details>
       ${done ? "" : `<div class="row actions"><span class="rule">Remove any wrong note, settle the profile if asked, then confirm.</span>
         <button class="primary" data-act="approve-check">Confirm and continue</button></div>`}`;
@@ -1911,7 +1925,12 @@ const screens = {
         return `<div class="card attn"><div class="spread"><h3 style="margin:0">${done ? "What was flagged" : "Worth a look before you approve"}</h3>
             <span class="row"><span class="muted">Re-read:</span>${aiActions(`reread:${iv.slug}`, "the re-read")}
               <span class="muted">Behind the lines:</span>${aiActions(`latent:${iv.slug}`, "behind the lines")}</span></div>
-          ${fixes.length ? `<h4>What the re-read corrected in the first reading</h4>${fixes.map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("")}` : ""}
+          ${fixes.length ? `<h4>Where the re-read disagrees with the first reading</h4>
+            <p class="muted">Notes from the AI, not changes: nothing was changed by itself. The re-read above already takes them into account.</p>
+            ${fixes.map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("")}
+            <div class="row"><span class="muted"><b>What you can do:</b> if a note says a theme overstates something or two themes overlap, reword the theme (✎) on the theme list;
+              if it is about one finding, reword the finding (✎) in the five readings. Otherwise nothing.</span>
+              <button class="small" data-go="codebook">Open the theme list</button><button class="small" data-go="codes" data-slug="${esc(iv.slug)}">Open the five readings</button></div>` : ""}
           ${misses.length ? `<h4>Topics in this interview that no theme covers</h4>${misses.map(x => `<div class="item">${esc(x.description)}</div>`).join("")}
             <div class="row"><span class="muted"><b>What you can do:</b> nothing, if it is minor; if it matters, ask for a theme that covers it with ✦ Refine on the theme list.</span>
               <button class="small" data-go="codebook">Open the theme list</button></div>` : ""}
@@ -1928,7 +1947,7 @@ const screens = {
           <span class="tag ${(LV[c.relevance] || ["grey"])[0]}">${(LV[c.relevance] || ["", c.relevance])[1]}</span></div>
           <div>${etext(`r-${i}`, c.summary || "", { kind: "recode", slug: iv.slug, path: ["theme_codings", i, "summary"] }, origOf(c, "summary"))}</div>${q(c.best_quote)}<div class="muted">Fit with the theme list: ${esc(c.codebook_fit)}. ${esc(c.fit_note)}</div></div>`).join("")}
         <h4>Topics in this interview that no theme covers</h4>${(r.themes_the_codebook_misses || []).map(x => `<div class="item">${esc(x.description)}</div>`).join("") || '<p class="muted">None.</p>'}
-        <h4>What the re-read corrected in the first reading</h4>${(r.corrections_to_earlier_coding || []).map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("") || '<p class="muted">None.</p>'}</div>
+        <h4>Where the re-read disagrees with the first reading (notes, nothing changed by itself)</h4>${(r.corrections_to_earlier_coding || []).map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("") || '<p class="muted">None.</p>'}</div>
       <div class="card"><div class="spread"><h2 style="margin:0">Behind the lines</h2>${srcTag("ai")}</div>
         <p class="muted">Done by an agent, checked by the program.</p>
         <p>${etext("l-syn", l.synthesis || "", { kind: "latent", slug: iv.slug, path: ["synthesis"] }, origOf(l, "synthesis"))}</p>
@@ -1987,7 +2006,7 @@ const screens = {
         <p class="what"><b>Your working comparison.</b> What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved (and none is left waiting for your approval), and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
         ${!ready ? `<div class="banner"><b>Next step:</b> approve at least two interviews (${c.approved.length} so far). It then runs by itself.</div>`
           : p.running === "cross" ? `<p>${spinner} Running. You can leave this page.</p>`
-          : old ? `<div class="banner"><b>Your inputs changed after it was made.</b> <button class="small" data-act="cross-run" ${p.running ? "disabled" : ""}>Run it again</button></div>`
+          : old ? `<div class="banner"><b>Your inputs changed after it was made.</b> <button class="small" data-act="cross-run">Run it again</button></div>`
           : job.status === "failed" ? `<div class="error">It stopped. <button class="small" data-act="cross-run">Run it again</button> <button class="link" data-log="cross">Why it stopped</button></div>` : ""}
         ${d ? `<div class="meta"><span>Built</span> ${esc(d.built)} <span>From</span> ${who(d.interviews)}</div>
           <h4>Overview</h4><p>${X("cx-ov", d.overview, ["overview"], d, "overview")}</p>
@@ -2194,6 +2213,13 @@ async function act(name) {
         for (const sl of ticked) await quickDecide(sl);
         note(`${ticked.length} done`); return load();
       }
+      case "add-term": {
+        // Added by hand, without running the check again (a Refine can over-correct and hide everyday words).
+        const t = val("add-term").trim().replace(/\s+/g, " ");
+        if (t.length < 3) return showError("Type at least 3 letters: shorter names would hide parts of ordinary words.");
+        await saveMeta(m => { m.identifying_terms = [...new Set([...(m.identifying_terms || []), t])]; });
+        document.getElementById("add-term").value = ""; return render();
+      }
       case "approve-check": {
         const body = {};
         if (document.getElementById("cp-pick")) {
@@ -2241,7 +2267,8 @@ async function act(name) {
         document.querySelectorAll("[data-sp-prof]").forEach(sel => { (speakers[sel.dataset.spProf] ||= {}).profile = sel.value; });
         await api(`projects/${pid}/interviews/${slug}/set-speakers`, { speakers }); return afterDecision(slug);
       }
-      case "cross-run": await api(`projects/${pid}/cross`, {}); cache = {}; note("Running the cross-analysis again"); return load();
+      case "cross-run": { const later = !!project.running; await api(`projects/${pid}/cross`, {}); cache = {};
+        note(later ? "Queued: the cross-analysis runs again once the step running now has finished" : "Running the cross-analysis again"); return load(); }
     }
   } catch (e) { note(""); showError(e.message); }
 }
