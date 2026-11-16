@@ -114,6 +114,11 @@
   .ai-act button:hover:not([disabled]), .ai-act button:focus-visible { color: var(--accent); background: var(--accent-soft); }
   .banner.you { background: var(--warn-soft); border-left-color: var(--warn); } .banner.you b { color: var(--warn); }
   .row.actions .rule { color: var(--muted); font-size: 14px; flex: 1 1 220px; }
+  td select { width: 100%; max-width: 18rem; text-overflow: ellipsis; }
+  /* On a short window the bar with the main button stops following the page, so it never hides a third of it. */
+  @media (max-height: 760px) { .row.actions { position: static; } }
+  .grid.stack { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .grid.stack textarea { width: 100%; }
   .then { margin: 10px 0 0; } .then b { color: var(--muted); font-weight: 600; }
   .legend { font-size: 13px; margin: -4px 0 6px; }
   .icard.wide { grid-column: 1 / -1; } .icard.wide .value { font-size: 17px; }
@@ -148,6 +153,7 @@
   .item.removed { opacity: .55; }
   .off-card { background: var(--code); }
   .ai-wait { font-size: 12.5px; color: var(--muted); }
+  .slow { color: var(--warn); }
   .found { display: block; margin-top: 6px; font-weight: 400; color: var(--muted); font-size: 13px; }
   .refine { border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; margin-top: 8px; width: 100%; }
   .refine textarea { width: 100%; margin: 4px 0 6px; }
@@ -431,7 +437,8 @@
       if (!iv.latentDone) return `${iv.slug}:latent`;
     }
     const ok = p.interviews.filter(iv => iv.final_approved).map(iv => iv.slug);
-    if (ok.length >= 2 && p.jobs.cross?.status !== "failed") {
+    const inReview = coded.some(iv => !iv.final_approved && iv.latentDone);  // it joins soon: wait for it
+    if (ok.length >= 2 && p.jobs.cross?.status !== "failed" && !inReview) {
       const from = p.cross ? p.cross.interviews : [];
       if (!p.cross || ok.some(x => !from.includes(x)) || from.some(x => !p.interviews.some(iv => iv.slug === x))) return "cross";
     }
@@ -568,7 +575,7 @@
   }
   function checkQuote(q, text, lines, first) {
     let status;
-    if (q && text.includes(q)) status = first ? "partial" : "verified";
+    if (q && (text.includes(q) || text.toLowerCase().includes(q.toLowerCase()))) status = first ? "partial" : "verified";
     else { const w = words(q).join(" "); status = w && words(text).join(" ").includes(w) ? "partial" : "not_found"; }
     const n = lineOf(q, lines), out = { status, line: n + 1 };
     if (status !== "verified") out.context = lines.slice(Math.max(0, n - 2), n + 3).map((t, k) => ({ n: Math.max(0, n - 2) + k + 1, text: t, hit: Math.max(0, n - 2) + k === n }));
@@ -706,8 +713,8 @@
     if (what === "quotes") return json(quotes(p));
     if (what === "search") return json(search(p, qs.get("q") || ""));
     if (what === "export") {
-      const c = qs.get("content");
-      const name = { all: "everything-demo.txt", interview: "interview-report-demo.txt", "interview-shareable": "interview-report-shareable-demo.txt",
+      const c = qs.get("content"), n = p.interviews.find(iv => iv.slug === qs.get("interview"))?.n;
+      const name = { all: "everything-demo.txt", interview: `interview-${n}-report-demo.txt`, "interview-shareable": `interview-${n}-report-shareable-demo.txt`,
                      cross: "cross-analysis-demo.txt", "cross-shareable": "cross-analysis-shareable-demo.txt" }[c] || `findings-table-demo.${qs.get("format") === "html" ? "html" : "txt"}`;
       return file(name, demoFile(c === "all" ? "a zip file with every report and table, full and shareable" : c && c.startsWith("table") ? "a table of every finding and theme (Excel, CSV or web page)" : "a Word report"));
     }
@@ -1015,20 +1022,30 @@ function yourTurn() {
 // Asked once, on a first click (browsers only allow it after a click).
 const askNotify = () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {}); };
 
+// The page redraws itself every few seconds while a step runs. A redraw in the middle of a click
+// swallows it (the button is replaced between press and release: a Save that did nothing), and one
+// while typing can move the cursor away. So the self-refresh waits while the researcher clicks or types.
+let pointerDown = false;
+document.addEventListener("pointerdown", () => { pointerDown = true; }, true);
+for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => setTimeout(() => { pointerDown = false; }, 0), true);
+let lastKey = 0;
+document.addEventListener("keydown", () => { lastKey = Date.now(); }, true);
+const busyHere = () => pointerDown || (Date.now() - lastKey < 2500 && document.activeElement?.matches?.("textarea, input:not([type=checkbox]):not([type=radio])"));
+const poll = () => { if (busyHere()) { pollTimer = setTimeout(poll, 700); return; } load(); };
 async function load() {
   clearTimeout(pollTimer);
   if (view.pid && !["home", "new"].includes(view.screen)) store.set("analysis-last-project", view.pid);
   try { project = view.pid && !["home", "new"].includes(view.screen) ? await api("projects/" + view.pid) : null; }
   catch (e) {
     // No answer from the platform (a moment's hiccup): stay on this page and try again.
-    if (e instanceof TypeError && project && project.id === view.pid) { pollTimer = setTimeout(load, 2000); return; }
+    if (e instanceof TypeError && project && project.id === view.pid) { pollTimer = setTimeout(poll, 2000); return; }
     view = { screen: "home" }; project = null;
   }
   try { projects = await api("projects"); } catch { projects = []; }
   await render();
   yourTurn();
   if (project && (project.running || project.interviews.some(i => i.status === "extracting")))
-    pollTimer = setTimeout(load, 3000);
+    pollTimer = setTimeout(poll, 3000);
 }
 
 // ---------------------------------------------------------------- pieces
@@ -1087,6 +1104,8 @@ const PHASES = [
     about: "You check the result and approve the interview." },
 ];
 const IV_STATE = { done: "Analysed", running: "In progress", failed: "Stopped", you: "Needs your input", todo: "Not started" };
+// An interview whose next step waits behind another one (the AI does one step at a time) says so.
+const ivWord = (p, iv, st) => st.state === "todo" && p.running && !p.running.startsWith(iv.slug + ":") ? "Waiting its turn" : IV_STATE[st.state];
 function combine(states) {
   if (states.every(x => x === "done")) return "done";
   for (const k of ["failed", "running", "you"]) if (states.includes(k)) return k;
@@ -1113,8 +1132,8 @@ const segs = (p, iv) => `<span class="segs" aria-hidden="true">${phasesOf(p, iv)
 function queue(p) {
   const out = [];
   let themes = false;
-  for (const iv of p.interviews) {
-    if (iv.status === "error" && !pendingRemoval.has(iv.slug)) { out.push({ key: `${iv.slug}:error`, slug: iv.slug, error: true, title: `${iv.label} · file not readable` }); continue; }
+  for (const iv of visibleInterviews(p)) {  // an interview being removed (Undo still possible) waits for nothing
+    if (iv.status === "error") { out.push({ key: `${iv.slug}:error`, slug: iv.slug, error: true, title: `${iv.label} · file not readable` }); continue; }
     const s = ivStatus(p, iv).step;
     if (!s || !["you", "failed"].includes(s.state)) continue;
     if (s.id === "approve-themes") { if (!themes) { themes = true; out.push({ key: "themes", slug: iv.slug, step: s, title: "Theme list" }); } continue; }
@@ -1142,7 +1161,7 @@ function sidebar(p) {
     ${link(cur("project"), 'data-nav="project"', "Inputs", `<span class="zone" aria-hidden="true">A</span>`)}
     ${link(cur("analysis"), 'data-nav="analysis"', "Analysis", `<span class="zone" aria-hidden="true">B</span>`)}
     ${visibleInterviews(p).map(iv => { const st = ivStatus(p, iv);
-      return link(view.slug === iv.slug && IV_SCREENS.includes(view.screen) ? "cur ivl" : "ivl", `data-iv="${esc(iv.slug)}" title="${esc(IV_STATE[st.state])}"`,
+      return link(view.slug === iv.slug && IV_SCREENS.includes(view.screen) ? "cur ivl" : "ivl", `data-iv="${esc(iv.slug)}" title="${esc(ivWord(p, iv, st))}"`,
                   esc(iv.label), `<span class="dot ${st.state}" aria-hidden="true">${ICON[st.state]}</span>`); }).join("")}
     ${link(`${cur("codebook")} ivl tl`, `data-nav="codebook" ${p.codebook.exists ? "" : "disabled"}`, "Theme list", `<span class="dot ${p.codebook.approved ? "done" : p.codebook.exists ? "you" : "todo"}" aria-hidden="true">${ICON[p.codebook.approved ? "done" : p.codebook.exists ? "you" : "todo"]}</span>`)}
     ${link(cur("results", "cross"), 'data-nav="results"', "Results", `<span class="zone" aria-hidden="true">C</span>`)}
@@ -1178,12 +1197,22 @@ function runLabel(p) {
            cross: { text: "the cross-analysis (comparing the approved interviews)", go: 'data-nav-go="results"' },
            report: { text: "the findings report (written, then built into Word)", go: 'data-nav-go="results"' } }[p.running] || { text: p.running, go: "" };
 }
+// How long the running step has been going, and a warning once that is far longer than usual
+// (every step normally takes under 5 minutes; a stuck call is retried by itself after 20).
+const SLOW_MIN = 12;
+function runningFor(p) {
+  const j = (p.jobs || {})[p.running];
+  if (!j || !j.started) return "";
+  const m = Math.max(0, Math.floor((Date.now() - new Date(j.started)) / 60000));
+  if (m < SLOW_MIN) return ` · ${m < 1 ? "just started" : `${m} min so far`}`;
+  return ` · ${m} min so far: <b class="slow">longer than usual.</b> If Claude does not answer, the step tries once more by itself and then stops with a message; you can also <button class="link" data-log="${esc(p.running)}">see what it is doing</button>`;
+}
 function nextAction(p) {
   const n = queue(p).length;
   if (n) return `<button class="primary" data-nav-go="review">Review ${n} decision${n > 1 ? "s" : ""} →</button>`;
   if (!visibleInterviews(p).length) return `<button class="primary" data-nav-go="project">Add interviews →</button>`;
   if (p.running) { const r = runLabel(p);
-    return `<span class="muted">${spinner} Running now: <button class="link" ${r.go}>${esc(r.text)}</button> · you can leave this page</span>`; }
+    return `<span class="muted">${spinner} Running now: <button class="link" ${r.go}>${esc(r.text)}</button>${runningFor(p)} · you can leave this page</span>`; }
   if (p.cross.exists && !p.reports.length) return `<button class="primary" data-act="report">Build the findings report →</button>`;
   if (p.interviews.some(iv => iv.final_approved))
     return ["results", "cross"].includes(view.screen) ? `<button class="primary" data-act="download-all">Download everything ↓</button>`
@@ -1225,7 +1254,7 @@ const EDITS = {};
 const origOf = (item, key) => item?.edited_by_researcher?.original?.["@" + key];
 function etext(id, value, loc, orig, multi = true) {
   EDITS[id] = loc;
-  if (editing.has(id)) return `<div class="etext ed"><textarea id="ed-${id}" rows="${multi ? 3 : 1}" aria-label="New text">${esc(value)}</textarea>
+  if (editing.has(id)) return `<div class="etext ed"><textarea id="ed-${id}" rows="${multi ? Math.min(14, Math.max(3, Math.ceil(String(value ?? "").length / 80) + 1)) : 1}" aria-label="New text">${esc(value)}</textarea>
       <div class="row"><button class="small" data-cancel="${id}">Cancel</button><button class="small primary" data-esave="${id}">Save</button></div></div>`;
   return `<span class="etext">${esc(value)}<button class="pen" data-edit="${id}" aria-label="Edit this text" title="Edit">✎</button>${orig != null
     ? `<details class="orig"><summary>edited by you</summary><span class="muted">The AI wrote: ${esc(orig)}</span></details>` : ""}</span>`;
@@ -1276,10 +1305,11 @@ async function saveCard(id) {
   } catch (e) { note(""); return showError(e.message); }
 }
 async function saveText(id) {
+  note("Saving…");
   try {
     await api(`projects/${view.pid}/edit-item`, { ...EDITS[id], value: val("ed-" + id) });
     editing.delete(id); cache = {}; note("Saved · the AI's original is kept"); return load();
-  } catch (e) { return showError(e.message); }
+  } catch (e) { note(""); return showError(`Not saved: ${e.message}`); }
 }
 
 // Each step, answered from the researcher's side: what it is, why it matters, what to do, what it gives, what comes next.
@@ -1297,7 +1327,7 @@ const STEP_GUIDE = {
   "confirm-check": { title: "You confirm the transcript check", what: "You read the agent's notes and settle the interviewee's profile.",
     why: "Nothing is read until you confirm: a wrong note would mislead all five readers.",
     todo: "Click “Check and confirm” to read the flagged lines first, or “Confirm as suggested” if you trust the check.",
-    produces: "Checked notes, and the interviewee's profile.", next: "Five AI readers start by themselves (about 10 minutes).", out: ["check", "Open the notes"] },
+    produces: "Checked notes, and the interviewee's profile.", next: "Five AI readers start by themselves (a few minutes).", out: ["check", "Open the notes"] },
   list: { title: "List of transcripts", what: "The program lists every transcript of the project with its date and word count.",
     why: "Dates and counts come from the program, never from an agent, so they cannot be wrong.", produces: "The list of transcripts.",
     next: "The transcript is cut into 4 parts." },
@@ -1330,7 +1360,7 @@ const STEP_GUIDE = {
   "approve-final": { title: "You approve the interview", what: "You check the re-read and the readings behind the lines.",
     why: "Only approved interviews go into the cross-analysis and the findings report.",
     todo: "Click “Check and approve”: look at what is flagged, reword anything wrong (✎), then approve.",
-    produces: "An approved interview.", next: "The cross-analysis runs by itself once two interviews are approved.", out: ["final", "Check and approve"] },
+    produces: "An approved interview.", next: "The cross-analysis runs by itself once two interviews are approved and none is left waiting for your approval.", out: ["final", "Check and approve"] },
 };
 const STATE_TXT = Object.fromEntries(Object.entries(STATE).map(([k, v]) => [k, v[1]]));
 const WHO_KIND = { program: "program · fixed rules", agent: "AI agent", you: "your decision" };
@@ -1339,7 +1369,8 @@ function stepCard(iv, s) {
   const todo = s.state === "you" ? G.todo
     : s.state === "failed" ? stopText(s, G)
     : s.state === "running" ? "Nothing: it is running. You can leave this page."
-    : s.state === "todo" ? "Nothing yet: it starts once the steps before it are done." : "Nothing: it is done.";
+    : s.state === "todo" ? `Nothing yet: it starts once the steps before it are done.${project.running && !project.running.startsWith(iv.slug + ":")
+        ? ` The AI does one step at a time across the project: it is busy with ${runLabel(project).text} now.` : ""}` : "Nothing: it is done.";
   const b = [];
   const open = OPEN[s.id];
   if (s.state === "you" && open) b.push(`<button class="primary" data-go="${open[0]}" data-slug="${esc(iv.slug)}">${open[1]}</button>`);
@@ -1455,7 +1486,7 @@ const screens = {
   async review() {
     const q = queue(project);
     if (!q.length) {
-      return `<div class="card"><h2>Review</h2><p>${project.running ? `${spinner} Nothing waits for you right now. Running now: ${esc(runLabel(project).text)}.
+      return `<div class="card"><h2>Review</h2><p>${project.running ? `${spinner} Nothing waits for you right now. Running now: ${esc(runLabel(project).text)}${runningFor(project)}.
         You will be told when it is your turn.` : "Nothing waits for you. Add an interview, or open the results."}</p>
         <div class="row"><button data-nav-go="project">Inputs</button><button data-nav-go="results">Results</button></div></div>`;
     }
@@ -1544,7 +1575,7 @@ const screens = {
             return `<tr>${anyTick ? `<td>${tickable(iv) ? `<input type="checkbox" data-bulk="${esc(iv.slug)}" aria-label="Tick ${esc(iv.label)}">` : ""}</td>` : ""}
               <td><b class="nowrap">${esc(iv.label)}</b></td><td class="num">${m.findings ?? "—"}</td>
               <td class="num">${m.themes ? `${m.central} of ${m.themes}` : "—"}</td><td class="num">${m.readings ?? "—"}</td>
-              <td><span class="tag ${STATE[st.state][0]}">${IV_STATE[st.state]}</span></td><td><button class="small" data-iv="${esc(iv.slug)}">Open</button></td></tr>`; }).join("")}</table></div>
+              <td><span class="tag ${STATE[st.state][0]}">${ivWord(p, iv, st)}</span></td><td><button class="small" data-iv="${esc(iv.slug)}">Open</button></td></tr>`; }).join("")}</table></div>
           ${anyTick ? `<div class="row" style="margin-top:8px"><button class="small" data-act="bulk">Confirm / approve the ticked interviews</button>
                <span class="muted">Transcript checks are confirmed with the agent's notes and suggested profile; interviews approved as they are.</span></div>` : ""}`
           : '<p class="muted">No interview yet: add them under Inputs.</p>'}</div>`;
@@ -1706,7 +1737,7 @@ const screens = {
             return `<tr><td><b class="nowrap">${esc(iv.label)}</b><div class="muted small-t">${esc(iv.original)}</div>${iv.status === "error" ? `<div class="bad-text">${esc(iv.message)}</div>` : ""}</td><td class="num">${(iv.words || 0).toLocaleString()}</td>
               <td>${prof ? esc(prof.role) : "—"}</td><td>${segs(p, iv)}<div class="muted">${st.phase ? esc(st.phase.name) : "all done"}</div></td>
               <td>${st.state === "you" && OPEN[st.step?.id] ? `<button class="tag warn tagbtn" data-go="${OPEN[st.step.id][0]}" data-slug="${esc(iv.slug)}" title="${esc(OPEN[st.step.id][1])}">${IV_STATE.you} ›</button>`
-                : `<span class="tag ${STATE[st.state][0]}">${IV_STATE[st.state]}</span>`}</td><td><button class="small" data-iv="${esc(iv.slug)}">Open</button></td></tr>`; }).join("")}</table></div>`
+                : `<span class="tag ${STATE[st.state][0]}">${ivWord(p, iv, st)}</span>`}</td><td><button class="small" data-iv="${esc(iv.slug)}">Open</button></td></tr>`; }).join("")}</table></div>`
           : `<div class="guide">
           <div><span class="node">1</span><b>Drop a transcript</b><span class="muted">Word, PDF, text, video-call export or a recording, below.</span></div>
           <div><span class="node">2</span><b>Check who speaks</b><span class="muted">Pre-filled for you, in a table. Then Start.</span></div>
@@ -1775,8 +1806,8 @@ const screens = {
           <label class="field" for="cp-pick">Profile</label><select id="cp-pick">
             <option value="new" selected>The suggested profile (below)</option>
             ${(project.profiles || []).map(pr => `<option value="${esc(pr.id)}">${esc(profileText(pr))}</option>`).join("")}</select>
-          <div class="grid" style="margin-top:8px">${[["role", "Role or position"], ["org_type", "Type of organisation"], ["sector", "Sector"]].map(([k, t]) =>
-            `<div><label class="field" for="cp-${k}">${t}</label><input type="text" id="cp-${k}" value="${esc(sugg[k] || "")}"></div>`).join("")}</div>`
+          <div class="grid stack" style="margin-top:8px">${[["role", "Role or position"], ["org_type", "Type of organisation"], ["sector", "Sector"]].map(([k, t]) =>
+            `<div><label class="field" for="cp-${k}">${t}</label><textarea id="cp-${k}" rows="${Math.min(4, Math.max(1, Math.ceil(String(sugg[k] || "").length / 70)))}">${esc(sugg[k] || "")}</textarea></div>`).join("")}</div>`
           : who && who.profile ? `<p class="muted">Interviewee: ${esc(profileText(who.profile))}</p>` : ""}
       </div>
       <details class="more" id="check-other-notes"><summary>The agent's other notes: who is who, misheard words, weak evidence, names to hide</summary>
@@ -1953,7 +1984,7 @@ const screens = {
         <button data-jump="export">Export</button></nav>
 
       <section class="card" id="sec-cross"><div class="spread"><h3 style="margin:0">Cross-analysis</h3><span class="row">${d ? srcTag("ai") : ""}${d && ready ? aiActions("cross", "the cross-analysis") : ""}</span></div>
-        <p class="what"><b>Your working comparison.</b> What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved, and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
+        <p class="what"><b>Your working comparison.</b> What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved (and none is left waiting for your approval), and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
         ${!ready ? `<div class="banner"><b>Next step:</b> approve at least two interviews (${c.approved.length} so far). It then runs by itself.</div>`
           : p.running === "cross" ? `<p>${spinner} Running. You can leave this page.</p>`
           : old ? `<div class="banner"><b>Your inputs changed after it was made.</b> <button class="small" data-act="cross-run" ${p.running ? "disabled" : ""}>Run it again</button></div>`
@@ -2029,18 +2060,15 @@ const screens = {
 // transcript, so they are never remembered. The only profile not used yet is pre-selected.
 function guessSpeakers(p, iv, labels) {
   const generic = /^(speaker|participant|interlocutor|person|\(no speaker names\))\s*\d*$/i;
-  const known = {}, used = new Set();
+  const known = {};
   p.interviews.filter(o => o.slug !== iv.slug).forEach(o => Object.values(o.speakers || {}).forEach(sp => {
     if (sp.role !== "interviewee" && !generic.test(sp.label)) known[sp.label] = sp.role;
-    if (sp.profile?.id) used.add(sp.profile.id);
   }));
   const out = {};
   labels.forEach(l => { if (known[l.label]) out[l.label] = { role: known[l.label] }; });
   const rest = labels.filter(l => !out[l.label]).sort((a, b) => (b.words || 0) - (a.words || 0));
-  const free = (p.profiles || []).filter(pr => !used.has(pr.id));
-  rest.forEach((l, i) => {
-    out[l.label] = i === 0 ? { role: "interviewee", profile: free.length === 1 ? { id: free[0].id } : undefined } : { role: "interviewer" };
-  });
+  // No profile is pre-selected: with several new interviews, one typed profile would be given to all of them.
+  rest.forEach((l, i) => { out[l.label] = { role: i === 0 ? "interviewee" : "interviewer" }; });
   return out;
 }
 const profileText = (pr) => [pr.role, pr.org_type, pr.sector].filter(Boolean).join(", ");
@@ -2105,9 +2133,12 @@ async function render() {
   if (name === "review" && key !== lastRendered && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   if (key !== lastRendered) {  // opened at a section: Results › Quotes, Results › Cross-analysis
     const anchor = name === "cross" ? "cross" : name === "results" ? view.step : "";
-    if (anchor) document.getElementById("sec-" + anchor)?.scrollIntoView({ block: "start" });
+    // A new page (or the next decision in Review) starts at its top, not where the last one was scrolled to.
+    if (anchor) document.getElementById("sec-" + anchor)?.scrollIntoView({ block: "start" }); else window.scrollTo(0, 0);
   }
-  lastRendered = key;
+  // Review picks its interview while drawing: remember the page as drawn, so the next self-refresh
+  // counts as the same page and keeps the sections the researcher opened.
+  lastRendered = `${name}|${view.slug || ""}`;
 }
 let lastRendered = "";
 
