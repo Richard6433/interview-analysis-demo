@@ -1018,6 +1018,7 @@ function fromAddress() {
 window.addEventListener("popstate", fromAddress);
 window.addEventListener("hashchange", fromAddress);
 let waiting = null;  // how many decisions were waiting at the last look
+let lastUpdated = "";
 function yourTurn() {
   const n = project ? queue(project).length : 0;
   document.title = n ? `(${n}) Interview analysis` : "Interview analysis";
@@ -1042,7 +1043,10 @@ const poll = () => { if (busyHere()) { pollTimer = setTimeout(poll, 700); return
 async function load() {
   clearTimeout(pollTimer);
   if (view.pid && !["home", "new"].includes(view.screen)) store.set("analysis-last-project", view.pid);
-  try { project = view.pid && !["home", "new"].includes(view.screen) ? await api("projects/" + view.pid) : null; }
+  try { project = view.pid && !["home", "new"].includes(view.screen) ? await api("projects/" + view.pid) : null;
+    // Something changed in the project (a step finished, a Refine replaced the theme list): what the page
+    // keeps in memory is fetched again, so it never shows the old version next to an active Approve.
+    if (project && project.updated !== lastUpdated) { if (lastUpdated) cache = {}; lastUpdated = project.updated; } }
   catch (e) {
     // No answer from the platform (a moment's hiccup): stay on this page and try again.
     if (e instanceof TypeError && project && project.id === view.pid) { pollTimer = setTimeout(poll, 2000); return; }
@@ -1113,6 +1117,9 @@ const PHASES = [
 const IV_STATE = { done: "Analysed", running: "In progress", failed: "Stopped", you: "Needs your input", todo: "Not started" };
 // An interview whose next step waits behind another one (the AI does one step at a time) says so.
 const ivWord = (p, iv, st) => st.state === "todo" && p.running && !p.running.startsWith(iv.slug + ":") ? "Waiting its turn" : IV_STATE[st.state];
+// A step asked for again while another one runs (Regenerate, Refine) waits in a queue; busy = running or queued.
+const queuedFor = (p, key) => (p.queued || []).find(q => q[0] === key);
+const busyWith = (p, ...keys) => keys.some(k => p.running === k || queuedFor(p, k));
 function combine(states) {
   if (states.every(x => x === "done")) return "done";
   for (const k of ["failed", "running", "you"]) if (states.includes(k)) return k;
@@ -1216,7 +1223,8 @@ function runningFor(p) {
 }
 function nextAction(p) {
   const n = queue(p).length;
-  if (n) return `<button class="primary" data-nav-go="review">Review ${n} decision${n > 1 ? "s" : ""} →</button>`;
+  const meanwhile = p.running ? `<span class="muted">${spinner} Meanwhile: <button class="link" ${runLabel(p).go}>${esc(runLabel(p).text)}</button>${runningFor(p)}</span>` : "";
+  if (n) return `${meanwhile}<button class="primary" data-nav-go="review">Review ${n} decision${n > 1 ? "s" : ""} →</button>`;
   if (!visibleInterviews(p).length) return `<button class="primary" data-nav-go="project">Add interviews →</button>`;
   if (p.running) { const r = runLabel(p);
     return `<span class="muted">${spinner} Running now: <button class="link" ${r.go}>${esc(r.text)}</button>${runningFor(p)} · you can leave this page</span>`; }
@@ -1380,7 +1388,9 @@ function stepCard(iv, s) {
   const G = STEP_GUIDE[s.id] || { title: s.title, what: s.about, why: "", produces: "", next: "" };
   const todo = s.state === "you" ? G.todo
     : s.state === "failed" ? stopText(s, G)
-    : s.state === "running" ? "Nothing: it is running. You can leave this page."
+    : s.state === "running" ? `Nothing: it is running${project.running === `${iv.slug}:${RERUN[s.id]}` ? runningFor(project) : ""}. You can leave this page.`
+    : s.state === "todo" && RERUN[s.id] && queuedFor(project, `${iv.slug}:${RERUN[s.id]}`)
+      ? `${spinner} Queued${queuedFor(project, `${iv.slug}:${RERUN[s.id]}`)[1].some(a => String(a).startsWith("--note=")) ? " with your instruction" : ""}: it starts once ${runLabel(project).text} has finished.`
     : s.state === "todo" ? `Nothing yet: it starts once the steps before it are done.${project.running && !project.running.startsWith(iv.slug + ":")
         ? ` The AI does one step at a time across the project: it is busy with ${runLabel(project).text} now.` : ""}` : "Nothing: it is done.";
   const b = [];
@@ -1404,6 +1414,31 @@ function stepCard(iv, s) {
     <dl class="sec2">${G.why ? `<dt>Why it matters</dt><dd>${G.why}</dd>` : ""}${G.produces ? `<dt>It produces</dt><dd>${G.produces}</dd>` : ""}</dl>
     ${s.lines && s.lines.length ? `<div class="cov">${s.lines.map(esc).join("\n")}</div>` : ""}</article>`;
 }
+// A profile that still reads like one person's exact job title or organisation (the program already
+// removes staff counts, years, countries and founder titles).
+function tooExact(prof) {
+  const all = ["role", "org_type", "sector"].map(k => prof[k] || "").join(" · ");
+  if (/\d/.test(all)) return "This profile contains a number.";
+  if (/\b(Head|Director|Officer|Manager|Coordinator|Lead|Chief|Editor|Advisor|Adviser)\b/.test(all)) return "This looks like an exact job title (written with capitals).";
+  return "";
+}
+
+// What the interviewee agreed to, and the passages they asked to keep off the record. Every later agent is
+// told never to quote them, the quote check flags any that slips through, and downloads leave them out.
+function consentCard(m, done) {
+  const c = m.consent;
+  if (!c) return "";
+  const off = c.off_the_record || [];
+  return `<div class="card ${off.length ? "attn" : ""}" id="consent"><h3 style="margin:0 0 6px">Consent and off the record ${tip("Found by the agent in what was said. Every later agent is told never to quote these passages; the quote check flags any that slips through, and every download leaves them out.")}</h3>
+    <label class="field" for="consent-sum">What the interviewee agreed to</label>
+    <div class="row"><input type="text" id="consent-sum" value="${esc(c.summary || "")}" ${done ? "disabled" : ""} style="flex:1 1 320px" aria-label="What the interviewee agreed to">
+      ${done ? "" : '<button class="small" data-act="consent-save">Save</button>'}</div>
+    ${off.length ? `<h4>Asked not to be quoted or used (${off.length})</h4>${off.map((x, i) => `<div class="item"><div>“${esc(x.text)}”</div>
+      <div class="muted">${x.line ? `line ${esc(x.line)} · ` : ""}${esc(x.request || "")}</div>
+      ${done ? "" : `<div class="row"><button class="small" data-offdel="${i}" title="Only if the agent misread: this was not a request to keep it off the record">Not a request: remove</button></div>`}</div>`).join("")}`
+      : '<p class="muted">No passage was asked to be kept off the record.</p>'}</div>`;
+}
+
 const STEP_ORDER = PHASES.flatMap(ph => ph.steps);
 const GONE = '<div class="card"><p>This interview is no longer in the project.</p><button data-nav-go="analysis">Go to Analysis</button></div>';
 // Why a step stopped, in words: another interview's file, a misquote, or something else.
@@ -1612,7 +1647,7 @@ const screens = {
         <tr><th>AI model</th><td><code>${esc(p.model)}</code>, run on your own Claude subscription (<code>claude -p</code>)</td></tr>
         <tr><th>Instructions file</th><td><code>${esc(g.file || "—")}</code></td></tr></table></div></div>
       ${steps.length ? `<div class="card"><h3>The steps and what runs them</h3><div class="wrap"><table><tr><th>Step</th><th>Done by</th><th>Program</th></tr>
-        ${steps.map(x => `<tr><td>${esc((STEP_GUIDE[x.id] || {}).title || x.title)}</td><td>${WHO[x.who]}</td><td><code>${esc(x.script)}</code></td></tr>`).join("")}</table></div></div>` : ""}
+        ${steps.map(x => `<tr><td>${esc((STEP_GUIDE[x.id] || {}).title || x.title)}</td><td>${x.who === "you" ? `${WHO_ICON.you} you (your decision)` : WHO[x.who]}</td><td>${x.who === "you" ? '<span class="muted">none: you decide on the page</span>' : `<code>${esc(x.script)}</code>`}</td></tr>`).join("")}</table></div></div>` : ""}
       ${g.preamble ? `<div class="card"><h3>Instructions given to the agents</h3>
         <p class="muted">The general part goes to every agent first; then each agent gets its own part, this interview's notes and its piece of the transcript.</p>
         <details><summary>The general part</summary><pre class="log">${esc(g.preamble)}</pre></details>
@@ -1621,7 +1656,8 @@ const screens = {
         ${Object.keys(p.jobs || {}).length ? `<div class="wrap"><table><tr><th>Step</th><th>Status</th><th>Pipeline</th><th>Started</th><th></th></tr>
           ${Object.entries(p.jobs).map(([k, j]) => `<tr><td>${esc(jobName(k))} <code class="muted">${esc(k)}</code></td><td><span class="tag ${STATE[j.status === "failed" ? "failed" : j.status === "running" ? "running" : "done"][0]}">${STATE[j.status === "failed" ? "failed" : j.status === "running" ? "running" : "done"][1]}</span></td>
             <td class="muted">${esc(j.pipeline_version || "before versions")}</td><td class="muted">${esc(j.started ? new Date(j.started).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "")}</td>
-            <td><span class="row"><button class="small" data-log="${esc(k)}">What the program did</button>${sent(k) ? `<button class="small" data-prompts="${esc(sent(k))}">Prompt</button>` : ""}</span></td></tr>`).join("")}</table></div>`
+            <td><span class="row"><button class="small" data-log="${esc(k)}">What the program did</button>${sent(k) ? `<button class="small" data-prompts="${esc(sent(k))}">Prompt</button>` : ""}
+              ${(j.earlier || []).map((e, i) => `<button class="small" data-log="${esc(e)}" title="The log of an earlier run of this step">Earlier run ${i + 1}</button>`).join("")}</span></td></tr>`).join("")}</table></div>`
           : '<p class="muted">No step has run yet.</p>'}</div>
       <div class="card"><h3>Which version made each result</h3>
         ${prov.length ? `<details><summary>${prov.length} result file(s)</summary><div class="wrap"><table><tr><th>File</th><th>Step</th><th>Pipeline</th><th>Instructions</th><th>Model</th><th>Written</th></tr>
@@ -1810,6 +1846,7 @@ const screens = {
                   ["interviewer_talking", "Where an interviewer does the talking"]].filter(([k]) => (m[k] || []).length);
     return `${errorBox()}${view.screen === "review" ? "" : `<h2 class="pg">${esc(iv.label)} · transcript check</h2>`}
       ${done ? banner("Confirmed. The analysis carries on by itself.", "Status") : ""}
+      ${consentCard(m, done)}
       <div class="card attn"><div class="spread"><h3 style="margin:0">${done ? "What was flagged" : "Worth a look before you confirm"}</h3>${done ? "" : aiActions(`check:${iv.slug}`, "the transcript check")}</div>
         ${look.length ? look.map(([k, t]) => `<h4>${t}</h4>${m[k].map((x, i) => `<div class="item spread" style="flex-wrap:nowrap"><span>${esc(x)}</span>${done ? "" : `<button class="small" data-del="${k}" data-i="${i}">✕ Remove this note</button>`}</div>`).join("")}`).join("")
           : '<p class="muted">Nothing unusual: no line under the wrong speaker, no sentence that may say the opposite.</p>'}
@@ -1819,7 +1856,8 @@ const screens = {
             <option value="new" selected>The suggested profile (below)</option>
             ${(project.profiles || []).map(pr => `<option value="${esc(pr.id)}">${esc(profileText(pr))}</option>`).join("")}</select>
           <div class="grid stack" style="margin-top:8px">${[["role", "Role or position"], ["org_type", "Type of organisation"], ["sector", "Sector"]].map(([k, t]) =>
-            `<div><label class="field" for="cp-${k}">${t}</label><textarea id="cp-${k}" rows="${Math.min(4, Math.max(1, Math.ceil(String(sugg[k] || "").length / 70)))}">${esc(sugg[k] || "")}</textarea></div>`).join("")}</div>`
+            `<div><label class="field" for="cp-${k}">${t}</label><textarea id="cp-${k}" rows="${Math.min(4, Math.max(1, Math.ceil(String(sugg[k] || "").length / 70)))}">${esc(sugg[k] || "")}</textarea></div>`).join("")}</div>
+          ${tooExact(sugg) ? `<p class="slow">${esc(tooExact(sugg))} The profile goes into every shareable result: a general kind of role is safer.</p>` : ""}`
           : who && who.profile ? `<p class="muted">Interviewee: ${esc(profileText(who.profile))}</p>` : ""}
       </div>
       <details class="more" id="check-other-notes"><summary>The agent's other notes: who is who, misheard words, weak evidence, names to hide</summary>
@@ -1834,7 +1872,7 @@ const screens = {
           <button class="small" data-act="add-term">Add to the names to hide</button></div>
       </div></details>
       ${done ? "" : `<div class="row actions"><span class="rule">Remove any wrong note, settle the profile if asked, then confirm.</span>
-        <button class="primary" data-act="approve-check">Confirm and continue</button></div>`}`;
+        <button class="primary" data-act="approve-check" ${busyWith(project, `${iv.slug}:check`) ? "disabled title=\"The check is being made again\"" : ""}>Confirm and continue</button></div>`}`;
   },
 
   async codes() {
@@ -1906,8 +1944,9 @@ const screens = {
             ${cb.frozen ? "" : `<button class="small" data-trs="${esc(r.theme.id)}">Put back</button>`}</div>`).join("")}</div>` : ""}
       ${(cb.unplaced || []).length ? `<div class="card" id="sec-unplaced"><h3>Findings not placed in a theme</h3>${cb.unplaced.map(u => `<div class="item"><b>${esc(u.code)}</b><div class="muted">${esc(u.reason)}</div></div>`).join("")}</div>` : ""}
       ${done ? "" : `<div class="row actions"><span class="rule">Reword any wrong theme (✎), then approve.</span>
-        <label class="opt freeze"><input type="checkbox" id="freeze"> <b>Freeze the list</b> <span class="muted">(final: later interviews no longer add themes. Not frozen: each new interview extends the list, and every interview is re-read after you approve it again)</span></label>
-        <button class="primary" data-act="codebook-approve">Approve</button></div>`}`;
+        <label class="opt freeze"><input type="checkbox" id="freeze"> <b>Freeze the list</b> ${tip("Frozen: final, later interviews no longer add themes. Not frozen: each new interview extends the list, and every interview is re-read after you approve it again.")}</label>
+        ${busyWith(project, "codebook") ? `<span class="muted">${spinner} Wait: the theme list is being made again.</span>` : ""}
+        <button class="primary" data-act="codebook-approve" ${busyWith(project, "codebook") ? "disabled" : ""}>Approve</button></div>`}`;
   },
 
   async final() {
@@ -1926,7 +1965,7 @@ const screens = {
             <span class="row"><span class="muted">Re-read:</span>${aiActions(`reread:${iv.slug}`, "the re-read")}
               <span class="muted">Behind the lines:</span>${aiActions(`latent:${iv.slug}`, "behind the lines")}</span></div>
           ${fixes.length ? `<h4>Where the re-read disagrees with the first reading</h4>
-            <p class="muted">Notes from the AI, not changes: nothing was changed by itself. The re-read above already takes them into account.</p>
+            <p class="muted">Notes from the AI, not changes: nothing was changed by itself. The full re-read (folded below) already takes them into account.</p>
             ${fixes.map(x => `<div class="item"><b>${esc(x.what_was_coded)}</b><div>${esc(x.what_the_full_reading_shows)}</div></div>`).join("")}
             <div class="row"><span class="muted"><b>What you can do:</b> if a note says a theme overstates something or two themes overlap, reword the theme (✎) on the theme list;
               if it is about one finding, reword the finding (✎) in the five readings. Otherwise nothing.</span>
@@ -1938,7 +1977,9 @@ const screens = {
           ${lowr.length ? `<h4>Readings behind the lines with low confidence</h4>${lowr.map(x => { const i = (l.readings || []).indexOf(x);
             return `<div class="item">${etext(`lw-${i}`, x.reading || "", { kind: "latent", slug: iv.slug, path: ["readings", i, "reading"] }, origOf(x, "reading"))}</div>`; }).join("")}` : ""}
           ${!fixes.length && !misses.length && !against.length && !lowr.length ? '<p class="muted">Nothing unusual: no correction, nothing the theme list misses, no low-confidence reading.</p>' : ""}
-          <h4>In one paragraph</h4><p>${esc(l.synthesis || r.document_summary || "")}</p></div>`; })()}
+          <h4>In one paragraph</h4><p>${l.synthesis || !r.document_summary
+            ? etext("l-syn-top", l.synthesis || "", { kind: "latent", slug: iv.slug, path: ["synthesis"] }, origOf(l, "synthesis"))
+            : etext("r-sum-top", r.document_summary || "", { kind: "recode", slug: iv.slug, path: ["document_summary"] }, origOf(r, "document_summary"))}</p></div>`; })()}
       <details class="more"><summary>The full re-read and the reading behind the lines ${kindTag("info")}</summary>
       <div class="card"><div class="spread"><h2 style="margin:0">${esc(iv.label)}: re-read against the themes</h2>${srcTag("ai")}</div>
         <p class="muted">Done by an agent, checked by the program. Click ✎ to reword: the AI's original is kept.</p>
@@ -1957,6 +1998,7 @@ const screens = {
         ${(l.desk_research_check || []).length ? `<h4>Earlier conclusions</h4>${l.desk_research_check.map(x => `<div class="item"><div class="spread"><b>${esc(x.prior_conclusion)}</b><span class="tag plain">${esc(x.does_this_interview_support_it)}</span></div>${q(x.evidence)}<div class="muted">${esc(x.note)}</div></div>`).join("")}` : ""}</div>
       </details>
       <div class="row actions">${done ? `<button data-act="reopen-final">Change my approval</button>`
+               : busyWith(project, `${iv.slug}:reread`, `${iv.slug}:latent`) ? `<span class="rule">${spinner} Wait: part of this interview is being made again. You approve the new version.</span><button class="primary" disabled>Approve</button>`
                : `<span class="rule">Reword anything wrong (✎), then approve.</span><button class="primary" data-act="approve-final">Approve</button>`}</div>`;
   },
 
@@ -1986,26 +2028,28 @@ const screens = {
     const Q = cache.quotes ??= await api(`projects/${view.pid}/quotes`);
     const who = (xs) => (xs || []).map(x => esc(label[x] || x)).join(", ");
     const ready = c.approved.length >= 2, old = c.exists && (p.context_changed_at || 0) > (job.ended_at || 0);
+    const waitingApproval = queue(p).filter(x => x.key.endsWith(":approve-final")).length;
     const X = (id, value, path, item, key, multi = true) => etext(id, value || "", { kind: "cross", path }, origOf(item, key), multi);
     const pairs = (xs) => `<ul class="pairs">${(xs || []).map(x => `<li><b>${esc(x[0] || "")}</b>${esc(x.slice(1).join(""))}</li>`).join("")}</ul>`;
     const only = view.step === "quotes" && view.slug ? view.slug : "";
     const mine = Q.items.filter(x => !only || x.slug === only);
     const problems = mine.filter(x => x.status !== "verified"), qok = mine.filter(x => x.status === "verified");
-    const QS = { verified: ["ok", "✓ Verified"], partial: ["warn", "≈ Partial match"], not_found: ["bad", "✗ Not found"] };
+    const QS = { verified: ["ok", "✓ Verified"], partial: ["warn", "≈ Partial match"], not_found: ["bad", "✗ Not found"], off_record: ["bad", "⚠ Off the record"] };
     const o = store.get("analysis-results-v2", { content: "report", format: "xlsx" });
     const rjob = p.report_job || {};
     return `${errorBox()}<h2 class="pg">Results</h2>
       <p class="lede">The comparison across interviews, the final analysis, every quote checked, and the files to download.</p>
       <nav class="chips" aria-label="On this page">
-        <button data-jump="cross">Cross-analysis <span class="tag ${d ? (old ? "warn" : "ok") : "grey"}">${d ? (old ? "older than your inputs" : "ready") : ready ? "starting" : `${c.approved.length} of 2 interviews approved`}</span></button>
+        <button data-jump="cross">Cross-analysis <span class="tag ${d ? (old ? "warn" : "ok") : "grey"}">${p.running === "cross" ? "running" : d ? (old ? "older than your inputs" : "ready") : !ready ? `${c.approved.length} of 2 interviews approved` : waitingApproval ? "waiting for your approvals" : busyWith(p, "cross") ? "queued" : "starting"}</span></button>
         <button data-jump="final">Findings report <span class="tag ${R ? "ok" : "grey"}">${R ? "ready" : "not built yet"}</span></button>
-        <button data-jump="quotes">Quote check <span class="tag ${Q.count.not_found ? "bad" : Q.count.partial ? "warn" : "ok"}">${Q.count.not_found ? `${Q.count.not_found} not found` : `${Q.count.verified} of ${Q.total} verified`}</span></button>
+        <button data-jump="quotes">Quote check <span class="tag ${Q.count.not_found || Q.count.off_record ? "bad" : Q.count.partial ? "warn" : "ok"}">${Q.count.off_record ? `${Q.count.off_record} off the record` : Q.count.not_found ? `${Q.count.not_found} not found` : `${Q.count.verified} of ${Q.total} verified`}</span></button>
         <button data-jump="export">Export</button></nav>
 
       <section class="card" id="sec-cross"><div class="spread"><h3 style="margin:0">Cross-analysis</h3><span class="row">${d ? srcTag("ai") : ""}${d && ready ? aiActions("cross", "the cross-analysis") : ""}</span></div>
         <p class="what"><b>Your working comparison.</b> What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved (and none is left waiting for your approval), and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
         ${!ready ? `<div class="banner"><b>Next step:</b> approve at least two interviews (${c.approved.length} so far). It then runs by itself.</div>`
-          : p.running === "cross" ? `<p>${spinner} Running. You can leave this page.</p>`
+          : p.running === "cross" ? `<p>${spinner} Running${runningFor(p)}. You can leave this page.</p>`
+          : !d && waitingApproval ? `<div class="banner"><b>Waiting for you:</b> ${waitingApproval} interview${waitingApproval > 1 ? "s wait" : " waits"} for your approval. It runs by itself once ${waitingApproval > 1 ? "they are" : "it is"} approved, so it compares them all at once. <button class="small" data-nav-go="review">Review</button></div>`
           : old ? `<div class="banner"><b>Your inputs changed after it was made.</b> <button class="small" data-act="cross-run">Run it again</button></div>`
           : job.status === "failed" ? `<div class="error">It stopped. <button class="small" data-act="cross-run">Run it again</button> <button class="link" data-log="cross">Why it stopped</button></div>` : ""}
         ${d ? `<div class="meta"><span>Built</span> ${esc(d.built)} <span>From</span> ${who(d.interviews)}</div>
@@ -2029,14 +2073,14 @@ const screens = {
           ${(R.comparison || []).length ? `<h4>Comparing the interviews</h4>${pairs(R.comparison)}` : ""}
           <details><summary>Theme by theme, interview by interview</summary>${Object.entries(R.themes || {}).map(([tid, t]) => `<div class="item"><b>${esc(names[tid] || tid)}</b><p>${esc(t.what || "")}</p>
             ${Object.entries(t).filter(([k]) => k !== "what").map(([sl, txt]) => `<div><span class="muted">${esc(label[sl] || sl)}:</span> ${esc(txt)}</div>`).join("")}</div>`).join("")}</details>
-          <details><summary>Limits</summary>${pairs(R.limits)}</details>` : `<p class="muted">${p.interviews.some(iv => iv.final_approved) ? "Not built yet: click “Build the findings report”." : "Not built yet. It needs at least one approved interview."}</p>`}
+          <details><summary>Limits</summary>${pairs(R.limits)}</details>` : `<p class="muted">${p.running === "report" ? `${spinner} Being built now: about two minutes.` : p.interviews.some(iv => iv.final_approved) ? "Not built yet: click “Build the findings report”." : "Not built yet. It needs at least one approved interview."}</p>`}
         ${reportLinks(p, true)}</section>
 
       <section class="card" id="sec-quotes"><h3>Quote check</h3>
         <p class="what">${problems.length || !Q.total ? "The program compares every quote used in the analysis with the original transcript, word for word. A quote that is not in the transcript must never reach your results."
           : `✓ All ${mine.length} quotes are in their transcripts, word for word. ${tip("The program compares every quote used in the analysis with the original transcript. A quote that is not in the transcript must never reach your results.")}`}</p>
         ${only ? `<div class="row"><span class="tag plain">Showing ${esc(label[only] || only)} only</span><button class="small" data-sec="quotes">Show every interview</button></div>` : ""}
-        ${problems.length ? `<div class="row"><span class="tag ok">✓ ${Q.count.verified} verified</span><span class="tag warn">≈ ${Q.count.partial} partial match</span><span class="tag bad">✗ ${Q.count.not_found} not found</span>
+        ${problems.length ? `<div class="row"><span class="tag ok">✓ ${Q.count.verified} verified</span><span class="tag warn">≈ ${Q.count.partial} partial match</span><span class="tag bad">✗ ${Q.count.not_found} not found</span>${Q.count.off_record ? `<span class="tag bad">⚠ ${Q.count.off_record} off the record</span>` : ""}
           ${tip("Verified: in the transcript word for word. Partial match: the same words once “uh”, punctuation and capitals are set aside, or set back to the transcript's exact words by the program. Not found: not in the transcript.")}</div>` : ""}
         ${only && problems.length && (p.steps[only] || []).some(x => x.id === "checks" && x.state === "failed")
           ? `<div class="banner you"><b>Next step:</b> fix or remove the quotes below, then
@@ -2046,7 +2090,7 @@ const screens = {
             <blockquote>${etext(`q${i}`, x.text, x.edit, null)}</blockquote>
             ${x.first_written ? `<div class="muted">The reader first wrote “${esc(x.first_written)}”; the program set it back to the transcript's words.</div>` : ""}
             <div class="ctx" aria-label="The transcript around it">${(x.context || []).map(l => `<div class="${l.hit ? "hit" : ""}"><span class="ln">${l.n}</span>${esc(l.text)}</div>`).join("")}</div>
-            <div class="row"><span class="muted"><b>What to do:</b> ${x.status === "not_found" ? "click ✎ and copy the exact words from the highlighted line, or remove the finding." : "nothing needed; click ✎ if the wording matters."}</span>
+            <div class="row"><span class="muted"><b>What to do:</b> ${x.status === "off_record" ? "the interviewee asked not to use this passage: remove the finding, or replace the quote (✎). It is already left out of every download." : x.status === "not_found" ? "click ✎ and copy the exact words from the highlighted line, or remove the finding." : "nothing needed; click ✎ if the wording matters."}</span>
               ${x.edit.kind === "codes" ? `<button class="small" data-fremove="${esc(x.edit.slug)}|${x.edit.part}|${x.edit.path[1]}|1">Remove the finding</button>` : ""}</div></div>`).join("")
           : Q.total ? "" : '<p class="muted">No quote yet: quotes appear once the readers have worked.</p>'}
         ${qok.length ? `<details><summary>The ${qok.length} verified quotes</summary><div class="wrap"><table><tr><th>Interview</th><th>Line</th><th>Where</th><th>Quote</th></tr>
@@ -2099,7 +2143,9 @@ function profileForm() {
     <div class="row" style="margin-top:8px"><button data-act="add-profile">Add this profile</button><span class="muted">No names: a role, never a person.</span></div>`;
 }
 
+let renderGen = 0;
 async function render() {
+  const gen = ++renderGen;
   document.getElementById("crumb").textContent = project ? "› " + project.name : "";
   const name = view.screen in screens ? view.screen : "home";
   if (!["home", "new"].includes(name) && !project) { view = { screen: "home" }; return render(); }
@@ -2126,8 +2172,13 @@ async function render() {
   const pageY = window.scrollY;
   const focus = key === lastRendered ? document.activeElement?.id : "";
   const framed = project && !["home", "new"].includes(name);
-  try { app.innerHTML = bar + (framed ? stepper(project) : "") + await screens[name]() + (framed ? footer(project) : ""); }
-  catch (e) { app.innerHTML = `${bar}<div class="error">${esc(e.message)}</div>`; }
+  // While the platform is slow, a page asked for earlier can finish drawing after the one asked for
+  // since: it is dropped, so the page always matches the menu and the address.
+  let html;
+  try { html = bar + (framed ? stepper(project) : "") + await screens[name]() + (framed ? footer(project) : ""); }
+  catch (e) { html = `${bar}<div class="error">${esc(e.message)}</div>`; }
+  if (gen !== renderGen) return;
+  app.innerHTML = html;
   for (const [id, open] of Object.entries(kept)) { const d = document.getElementById(id); if (d) d.open = open; }
   if (keptAll) { const all = [...app.querySelectorAll("details:not([id])")]; if (all.length === keptAll.length) all.forEach((d, i) => { d.open = keptAll[i]; }); }
   let selection = null;
@@ -2158,6 +2209,7 @@ async function render() {
   // Review picks its interview while drawing: remember the page as drawn, so the next self-refresh
   // counts as the same page and keeps the sections the researcher opened.
   lastRendered = `${name}|${view.slug || ""}`;
+  showPreparing();
 }
 let lastRendered = "";
 
@@ -2184,14 +2236,25 @@ async function upload(list, force = false) {
   if (errs.length) showError(errs.join("\n"));  // every file that could not be added, not just the last
 }
 async function saveMeta(change) {
+  cache.meta ??= await api(`projects/${view.pid}/file/meta/${view.slug}`);
   change(cache.meta);
   note("Saving…");
   try { await api(`projects/${view.pid}/interviews/${view.slug}/edit-check`, cache.meta); note("All changes saved"); }
   catch (e) { showError(e.message); }
 }
+// An edit opened with ✎ and not saved yet is saved before a decision, never thrown away.
+async function saveOpenEdits() {
+  for (const id of [...editing]) {
+    const el = document.getElementById("ed-" + id);
+    if (!el || !EDITS[id] || el.value === el.defaultValue) continue;
+    await api(`projects/${view.pid}/edit-item`, { ...EDITS[id], value: el.value });
+    editing.delete(id); cache = {};
+  }
+}
 async function act(name) {
   const pid = view.pid, slug = view.slug;
   try {
+    if (["approve-check", "approve-final", "codebook-approve"].includes(name)) await saveOpenEdits();
     switch (name) {
       case "home": return go("home");
       case "start-all": {
@@ -2217,8 +2280,13 @@ async function act(name) {
         // Added by hand, without running the check again (a Refine can over-correct and hide everyday words).
         const t = val("add-term").trim().replace(/\s+/g, " ");
         if (t.length < 3) return showError("Type at least 3 letters: shorter names would hide parts of ordinary words.");
+        const before = document.getElementById("add-term").getBoundingClientRect().top;
         await saveMeta(m => { m.identifying_terms = [...new Set([...(m.identifying_terms || []), t])]; });
-        document.getElementById("add-term").value = ""; return render();
+        document.getElementById("add-term").value = ""; await render();
+        // The new name is added above the box: the page moves with it, so the next click lands where it was aimed.
+        const box = document.getElementById("add-term");
+        if (box) { window.scrollBy(0, box.getBoundingClientRect().top - before); box.focus({ preventScroll: true }); }
+        note(`Added “${t}” to the names to hide`); return;
       }
       case "approve-check": {
         const body = {};
@@ -2228,6 +2296,11 @@ async function act(name) {
           else body.profile_id = pick;
         }
         await api(`projects/${pid}/interviews/${slug}/approve-check`, body); return afterDecision(slug);
+      }
+      case "consent-save": {
+        const summary = val("consent-sum").trim();
+        await saveMeta(m => { m.consent = { ...(m.consent || { off_the_record: [] }), summary }; });
+        note("Saved"); return render();
       }
       case "delete-ask": confirmDelete = true; return render();
       case "delete-cancel": confirmDelete = false; return render();
@@ -2324,24 +2397,34 @@ function removeWithUndo(slug) {
   if (view.screen === "interview" && view.slug === slug) return go("project");
   render();
 }
+// A file being made stays announced until it arrives (a big zip can take a minute), and a second click
+// on the same file does not start it twice.
+const preparing = new Set();
+function showPreparing() {
+  const el = document.getElementById("saved");
+  if (preparing.size) el.innerHTML = `${spinner} Preparing ${preparing.size > 1 ? `${preparing.size} files` : "the file"}… it downloads by itself`;
+  else if (el.textContent.startsWith("Preparing")) el.textContent = "";
+}
+async function fetchFile(id, url, fallback) {
+  if (preparing.has(id)) return;
+  preparing.add(id); showPreparing();
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return showError((await r.json().catch(() => ({}))).error || "The file could not be made.");
+    const name = (r.headers.get("Content-Disposition") || "").match(/filename="(.+)"/)?.[1] || fallback;
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name });
+    a.click(); URL.revokeObjectURL(a.href); note("Downloaded");
+  } catch { showError("The file could not be made: the platform did not answer."); }
+  finally { preparing.delete(id); showPreparing(); }
+}
 async function downloadReport(content, slug) {
-  note("Preparing the file…");
-  const r = await fetch(`/api/projects/${view.pid}/export?${new URLSearchParams({ content, format: "docx", interview: slug })}`);
-  if (!r.ok) { note(""); return showError((await r.json().catch(() => ({}))).error || "The file could not be made."); }
-  const name = (r.headers.get("Content-Disposition") || "").match(/filename="(.+)"/)?.[1] || "report.docx";
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name });
-  a.click(); URL.revokeObjectURL(a.href); note("Downloaded");
+  return fetchFile(`${content}|${slug}`, `/api/projects/${view.pid}/export?${new URLSearchParams({ content, format: "docx", interview: slug })}`, "report.docx");
 }
 async function download() {
   const content = document.querySelector("input[name=content]:checked")?.value || "table";
   const format = document.querySelector("input[name=fmt]:checked")?.value || "xlsx";
   store.set("analysis-results-v2", { content, format });
-  note("Preparing the file…");
-  const r = await fetch(`/api/projects/${view.pid}/export?${new URLSearchParams({ content, format })}`);
-  if (!r.ok) { note(""); return showError((await r.json().catch(() => ({}))).error || "The file could not be made."); }
-  const name = (r.headers.get("Content-Disposition") || "").match(/filename="(.+)"/)?.[1] || "results";
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name });
-  a.click(); URL.revokeObjectURL(a.href); note("Downloaded");
+  return fetchFile(`${content}|${format}`, `/api/projects/${view.pid}/export?${new URLSearchParams({ content, format })}`, "results");
 }
 
 document.getElementById("home-link").addEventListener("click", () => go("home"));
@@ -2352,6 +2435,7 @@ document.getElementById("menu-toggle").addEventListener("click", (e) => {
 document.getElementById("side").addEventListener("click", (e) => { if (e.target.closest("button")) document.body.classList.remove("menu-open"); });
 document.addEventListener("keydown", (e) => {
   if (e.target.id === "psearch" && e.key === "Enter" && e.target.value.trim()) go("search", { step: e.target.value.trim() });
+  if (e.target.id === "add-term" && e.key === "Enter") { e.preventDefault(); act("add-term"); }
 });
 document.addEventListener("keydown", (e) => {
   if (view.screen !== "review" || e.altKey || e.ctrlKey || e.metaKey || ["INPUT", "TEXTAREA", "SELECT", "BUTTON", "SUMMARY", "A", "LABEL"].includes(e.target.tagName)
@@ -2388,10 +2472,20 @@ app.addEventListener("click", async (e) => {
   clickBusy = true;
   try { await onClick(e, b); } finally { clickBusy = false; }
 });
+// Scrolled so the whole box shows above the sticky action bar at the bottom of decision pages.
+function intoView(el) {
+  if (!el) return;
+  const bar = document.querySelector(".row.actions");
+  const barH = bar && getComputedStyle(bar).position === "sticky" ? bar.offsetHeight : 0;
+  const r = el.getBoundingClientRect();
+  if (r.bottom > window.innerHeight - barH - 8 || r.top < 0) window.scrollBy(0, r.top - Math.max(16, (window.innerHeight - barH - r.height) / 2));
+}
 async function onClick(e, b) {
   const d = b.dataset;
   errorMsg = "";  // an old error does not outlive the next action
-  if (d.edit) { editing.add(d.edit); await render(); document.querySelector(`#ed-${CSS.escape(d.edit)}, #card-${CSS.escape(d.edit)} textarea, #card-${CSS.escape(d.edit)} input`)?.focus(); return; }
+  if (d.edit) { editing.add(d.edit); await render();
+    const box = document.querySelector(`#ed-${CSS.escape(d.edit)}, #card-${CSS.escape(d.edit)} textarea, #card-${CSS.escape(d.edit)} input`);
+    box?.focus({ preventScroll: true }); intoView(box?.closest(".etext, .icard") || box); return; }
   if (d.cancel) { editing.delete(d.cancel); return render(); }
   if (d.save) return saveCard(d.save);
   if (d.esave) return saveText(d.esave);
@@ -2415,7 +2509,8 @@ async function onClick(e, b) {
     catch (err) { return showError(err.message); }
   }
   if (d.regenGo) { regenAsk = null; return runAgain(d.regenGo, ""); }
-  if (d.refine) { refining = d.refine; await render(); document.getElementById("rf-text")?.focus(); return; }
+  if (d.refine) { refining = d.refine; await render(); const rf = document.getElementById("rf-text"); rf?.focus({ preventScroll: true }); intoView(rf?.closest(".refine")); return; }
+  if (d.offdel !== undefined) return saveMeta(m => { m.consent.off_the_record.splice(+d.offdel, 1); }).then(render);
   if (d.refineCancel) { refining = null; return render(); }
   if (d.refineGo) { const t = val("rf-text").trim(); if (!t) return showError("Write the instruction first."); return runAgain(d.refineGo, t); }
   if (d.jump) { document.getElementById("sec-" + d.jump)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
