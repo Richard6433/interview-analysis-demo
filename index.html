@@ -544,6 +544,13 @@
   @media (max-width: 700px) { .slide { aspect-ratio: auto; width: calc(100vw - 20px); height: calc(100vh - 120px); padding: 22px; } .sl-kpis { grid-template-columns: 1fr 1fr; gap: 16px; }
     .sl-themes { grid-template-columns: minmax(0, 1fr); } .sl-bar { grid-template-columns: 40% minmax(0, 1fr) 44px; } }
   @media (max-width: 600px) { .tf-nav { position: static; justify-content: flex-end; margin: 0 0 16px; } .tf-stage { padding-bottom: 24px; } }
+  .pseg { display: inline-flex; gap: 2px; width: 140px; height: 8px; border-radius: 999px; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+  table.projs td { vertical-align: middle; }
+  .intro-row { margin: 0 0 14px; }
+  #intro { position: fixed; inset: 0; z-index: 70; background: rgba(10, 14, 18, .78); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .intro-in { background: var(--surface); border-radius: 12px; padding: 12px 14px 8px; width: min(1000px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  .intro-in video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; margin: 10px 0 6px; }
+  .intro-in p { margin: 0 0 4px; font-size: 12.5px; }
   #demo-bar { background: var(--warn-soft); color: var(--text); border-bottom: 1px solid var(--line); font-size: 13.5px;
               padding: 8px max(16px, env(safe-area-inset-left, 0px)); display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; }
   #demo-bar button { font-size: 13px; padding: 3px 10px; }
@@ -560,7 +567,8 @@
 </header>
 <div id="demo-bar" role="note"><b>Demo</b> · three invented interviews · the AI agents are simulated (each step takes seconds, not minutes) ·
   nothing leaves your browser. <button type="button" onclick="window.DEMO_ADD_SAMPLES()">Add the 3 sample interviews</button>
-  <button type="button" onclick="window.DEMO_RESET()">Start the demo again</button></div>
+  <button type="button" onclick="window.DEMO_RESET()">Start the demo again</button>
+  <button type="button" onclick="window.openIntro()">▶ Watch the 2-minute intro</button></div>
 <div class="layout noside" id="layout"><aside id="side" hidden aria-label="Project navigation"></aside><main id="app" aria-live="polite"></main></div>
 <div id="toast" hidden role="status"></div>
 <div id="note-toast" hidden role="status" aria-live="polite"></div>
@@ -576,7 +584,7 @@
   const KEY = "interview-demo-state-v1", PV = "2.0.0 (demo)";
   const DUR = { check: 2500, read: 5000, codebook: 3500, reread: 3000, latent: 3000, cross: 4000, report: 3500 };
   const clone = (x) => JSON.parse(JSON.stringify(x));
-  const nowIso = () => new Date().toISOString().slice(0, 19);
+  const nowIso = () => new Date().toISOString().slice(0, 19) + "Z";  // with the Z: read as UTC, not as local time (a step "60 min" old in Italy)
   const secs = () => Date.now() / 1000;
   const err = (msg, status = 400, extra = {}) => Object.assign(new Error(msg), { status, extra });
 
@@ -1957,7 +1965,7 @@ async function openSlides() {
       <span class="sl-v">${t.central} · ${t.mentioned}</span></div>`).join("")}</div>`;
   const S = [];
   S.push(`<div class="sl-title"><div class="sl-kicker">Interview analysis</div><h1>${esc(p.name)}</h1><p class="sl-q">${esc(p.question)}</p>
-    <p class="sl-meta">${n} interview${n === 1 ? "" : "s"} analysed · ${new Date().toLocaleDateString([], { dateStyle: "long" })}</p></div>`);
+    <p class="sl-meta">${n} interview${n === 1 ? "" : "s"} analysed · ${new Date().toLocaleDateString("en-GB", { dateStyle: "long" })}</p></div>`);
   S.push(`<h2>In numbers</h2><div class="sl-kpis">${[[visibleInterviews(p).length, "interviews"], [D.findings, "findings, every quote checked"], [(D.themes || []).length, "themes"],
     [(d?.patterns || []).length, "shared patterns"]].map(([v, l]) => `<div><b>${Number(v || 0).toLocaleString()}</b><span>${l}</span></div>`).join("")}</div>`);
   const take = (R?.takeaways || []).slice(0, 5);
@@ -2016,6 +2024,91 @@ document.addEventListener("keydown", (e) => {
   else if (k === "Escape") { e.preventDefault(); closeSlides(); }
   else if (k === "f" || k === "F") { e.preventDefault(); (document.fullscreenElement ? document.exitFullscreen() : deck.requestFullscreen?.())?.catch?.(() => {}); }
 }, true);
+// The main menu's dashboard: every project at a glance, and who was interviewed across all of them
+// (profiles with the same role, organisation and sector are counted together).
+async function generalDashboard() {
+  const all = (await Promise.all(projects.map(x => api("projects/" + x.id).catch(() => null)))).filter(Boolean);
+  if (!all.length) return "";
+  const rows = all.map(p => {
+    const ivs = visibleInterviews(p), st = ivs.map(iv => ivStatus(p, iv).state);
+    const c = Object.fromEntries(["done", "running", "you", "failed", "todo"].map(k => [k, st.filter(x => x === k).length]));
+    return { p, ivs, c, waiting: queue(p).length };
+  });
+  const SEG = [["done", "var(--c1)", "analysed"], ["you", "color-mix(in srgb, var(--c1) 50%, var(--surface))", "need you"],
+               ["running", "color-mix(in srgb, var(--c1) 25%, var(--surface))", "in progress"], ["failed", "var(--c2)", "stopped"],
+               ["todo", "color-mix(in srgb, var(--muted) 30%, var(--surface))", "not started"]];
+  const table = `<div class="wrap"><table class="projs"><tr><th>Project</th><th class="num">Interviews</th><th>Where they stand</th><th class="num">Waiting for you</th></tr>
+    ${rows.map(({ p, ivs, c, waiting }) => `<tr><td><button class="link" data-open="${esc(p.id)}" style="font-size:14px"><b>${esc(p.name)}</b></button>${p.running ? `<div class="muted small-t">${spinner} a step is running</div>` : ""}</td>
+      <td class="num">${ivs.length}</td>
+      <td>${ivs.length ? `<span class="pseg" role="img" aria-label="${esc(SEG.filter(([k]) => c[k]).map(([k, , w]) => `${c[k]} ${w}`).join(", "))}"
+          data-ct="${esc(SEG.filter(([k]) => c[k]).map(([k, , w]) => `${c[k]} ${w}`).join(" · "))}">${SEG.filter(([k]) => c[k]).map(([k, col]) => `<span style="flex:${c[k]};background:${col}"></span>`).join("")}</span>
+          <span class="muted small-t">${c.done} of ${ivs.length} analysed</span>` : '<span class="muted small-t">no interview yet</span>'}</td>
+      <td class="num">${waiting ? `<button class="tag warn tagbtn" data-continue="${esc(p.id)}" data-to="review">${waiting} ›</button>` : '<span class="muted">0</span>'}</td></tr>`).join("")}</table></div>
+    <div class="legend-row" style="margin-top:8px">${SEG.map(([, col, w]) => `<span><i class="sw" style="background:${col}"></i>${w}</span>`).join("")}</div>`;
+  const groups = new Map();
+  let noProf = 0;
+  for (const { p, ivs } of rows) {
+    for (const pr of p.profiles || []) {
+      const k = ["role", "org_type", "sector"].map(f => String(pr[f] || "").trim().toLowerCase()).join("|");
+      if (!groups.has(k)) groups.set(k, { text: profileText(pr), n: 0, projects: new Set() });
+      groups.get(k).projects.add(p.name);
+    }
+    for (const iv of ivs) {
+      const who = Object.values(iv.speakers || {}).find(sp => sp.role === "interviewee");
+      const pr = who?.profile && (p.profiles || []).find(x => x.id === who.profile.id) || who?.profile;
+      if (!pr) { noProf++; continue; }
+      const k = ["role", "org_type", "sector"].map(f => String(pr[f] || "").trim().toLowerCase()).join("|");
+      if (!groups.has(k)) groups.set(k, { text: profileText(pr), n: 0, projects: new Set([p.name]) });
+      groups.get(k).n++;
+    }
+  }
+  const prof = [...groups.values()].sort((a, b) => b.n - a.n || a.text.localeCompare(b.text));
+  const top = Math.max(1, noProf, ...prof.map(x => x.n));
+  const bar = (n, label, tip, flag = "", grey = false) => `<div class="brow" tabindex="0" data-ct="${esc(tip)}"><div class="bl">${label}</div><div class="btrack">${n
+    ? `<span class="bbar" style="width:${Math.round((68 * n) / top)}%"><span class="bseg ${grey ? "grey" : ""}" style="flex:1"></span></span>` : '<span class="bzero"></span>'}<span class="bval">${n}</span>${flag}</div></div>`;
+  const who = `<section class="card"><div class="chart-h"><h3>Who you interviewed, across all projects</h3><span class="muted">interviews</span></div>
+    <p class="chart-sub">Interviews per kind of interviewee (role, organisation, sector). A profile with no bar is one you have not reached yet.</p>
+    ${prof.length || noProf ? prof.map(x => bar(x.n, `${esc(x.text)} <small>${esc([...x.projects].join(", "))}</small>`, `${x.text}: ${x.n} interview(s), in ${[...x.projects].join(", ")}`,
+        x.n ? "" : '<span class="flag">⚠ not interviewed yet</span>')).join("")
+      + (noProf ? bar(noProf, "<small>Profile not given yet</small>", `${noProf} interview(s) without a profile yet`, "", true) : "")
+      : '<p class="muted">No profile yet: each project sets them under Question and profiles.</p>'}
+    <details class="astable"><summary>As a table</summary><div class="wrap"><table><tr><th>Profile</th><th class="num">Interviews</th><th>Projects</th></tr>
+      ${prof.map(x => `<tr><td>${esc(x.text)}</td><td class="num">${x.n}</td><td>${esc([...x.projects].join(", "))}</td></tr>`).join("")}
+      ${noProf ? `<tr><td>Profile not given yet</td><td class="num">${noProf}</td><td></td></tr>` : ""}</table></div></details></section>`;
+  const total = rows.reduce((n, r) => n + r.ivs.length, 0), done = rows.reduce((n, r) => n + r.c.done, 0), waiting = rows.reduce((n, r) => n + r.waiting, 0);
+  return `<div class="kpis">${[["Projects", all.length, ""], ["Interviews", total, `${done} analysed`], ["Profiles", prof.length, `${prof.filter(x => x.n).length} interviewed`],
+      ["Your decisions", waiting, waiting ? "waiting in Review" : "nothing waits for you"]].map(([l, v, sub]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${Number(v).toLocaleString()}</div><div class="s">${sub}</div></div>`).join("")}</div>
+    <section class="card" id="sec-projects"><h3>Every project</h3>${table}</section>${who}`;
+}
+// The 2-minute introduction, in a window over the page (Esc or a click outside closes it).
+let introOpener = null;
+function openIntro() {
+  let box = document.getElementById("intro");
+  if (!box) {
+    box = Object.assign(document.createElement("div"), { id: "intro", hidden: true });
+    box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Introduction video");
+    box.innerHTML = `<div class="intro-in"><div class="spread"><b>The platform in two minutes</b><button type="button" data-intro-close="1">✕ Close</button></div>
+      <video controls playsinline preload="metadata" src="intro.mp4"></video>
+      <p class="muted" id="intro-note">Recorded from the demo: invented interviews, simulated agents.</p></div>`;
+    document.body.append(box);
+    box.addEventListener("click", (e) => { if (e.target === box || e.target.closest("[data-intro-close]")) closeIntro(); });
+    box.querySelector("video").addEventListener("error", () => { document.getElementById("intro-note").textContent = "The video could not be loaded."; });
+  }
+  introOpener = document.activeElement;
+  box.hidden = false; document.body.classList.add("deck-open");
+  const v = box.querySelector("video");
+  try { v.currentTime = 0; } catch {}
+  v.play().catch(() => {});
+  box.querySelector("[data-intro-close]").focus();
+}
+function closeIntro() {
+  const box = document.getElementById("intro");
+  if (!box || box.hidden) return;
+  box.querySelector("video").pause(); box.hidden = true; document.body.classList.remove("deck-open");
+  if (introOpener?.isConnected) introOpener.focus();
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.getElementById("intro")?.hidden === false) { e.preventDefault(); closeIntro(); } }, true);
+window.openIntro = openIntro;
 const STEP_ORDER = PHASES.flatMap(ph => ph.steps);
 const GONE = '<div class="card"><p>This interview is no longer in the project.</p><button data-nav-go="project">Go to the overview</button></div>';
 // Why a step stopped, in words: another interview's file, a misquote, or something else.
@@ -2101,8 +2194,9 @@ const screens = {
             <button class="primary" data-continue="${esc(lp.id)}" data-to="${n ? "review" : "project"}">${n ? "Review now →" : "Open →"}</button></div></div>`;
       } catch {}
     }
-    // The projects are listed in the sidebar; this page only says where to go next and how it works.
-    return `${errorBox()}${cont}
+    // The projects are listed in the sidebar; this page says where to go next, how they all stand, and how it works.
+    return `${errorBox()}<div class="row intro-row"><button data-act="intro">▶ Watch the 2-minute intro</button><span class="muted">How the platform works, from a new project to the slides.</span></div>
+      ${cont}${projects.length ? await generalDashboard() : ""}
       ${projects.length ? "" : `<div class="card"><h3>Your first project</h3><div class="guide">
           <div><span class="node">1</span><b>Create a project</b><span class="muted">A name and your research question.</span></div>
           <div><span class="node">2</span><b>Add interviews</b><span class="muted">Drop your transcripts or recordings.</span></div>
@@ -2463,7 +2557,7 @@ const screens = {
     const kpis = `<div class="kpis">
       ${kpi("Interviews", nf(ivs.length), `${counts.done} analysed${counts.you ? ` · ${counts.you} need you` : ""}${counts.running ? ` · ${counts.running} running` : ""}`)}
       ${kpi("Words", words >= 10000 ? `${(words / 1000).toFixed(0)}K` : nf(words), "in the transcripts")}
-      ${kpi("Profiles", nf((d?.profiles || []).length), `${(d?.profiles || []).filter(x => x.interviews).length} interviewed`)}
+      ${kpi("Readings", nf(ivs.reduce((n, iv) => n + ((p.summaries?.[iv.slug] || {}).readings || 0), 0)), "behind the lines: what is implied, not said")}
       ${kpi("Findings", nf(d?.findings), read ? `from ${read} interview${read > 1 ? "s" : ""}, every quote checked` : "after the first reading")}
       ${kpi("Themes", nf(p.codebook.themes), p.codebook.approved ? "approved by you" : p.codebook.exists ? "wait for your approval" : "not built yet")}
       ${kpi("Your decisions", nf(waiting), waiting ? "waiting in Review" : "nothing waits for you")}</div>`;
@@ -2492,15 +2586,7 @@ const screens = {
         + table(["Question", "Findings", "Interviews"], sqs.map(x => [`${x.id}. ${x.text}`, x.findings, x.interviews]))
         : none(hasSubs ? `${d.sub_questions.length - 1} sub-question${d.sub_questions.length > 2 ? "s" : ""}: filled once the first interview has been read.` : "Filled once the first interview has been read.")}</section>`;
     // Who was interviewed: interviews per profile.
-    const profs = d?.profiles || [], noProf = ivs.filter(iv => !Object.values(iv.speakers || {}).some(sp => sp.role === "interviewee" && sp.profile)).length;
-    const topP = max([...profs.map(x => x.interviews), noProf]);
-    const who = `<section class="card"><div class="chart-h"><h3>Who you interviewed</h3><span class="muted">interviews</span></div>
-      <p class="chart-sub">Interviews per profile. A profile with no bar is a kind of interviewee you have not reached yet.</p>
-      ${profs.length || noProf ? profs.map(x => bar([{ n: x.interviews }], topP, `${x.text}: ${x.interviews} interview(s)`,
-          `<b>${esc(x.id)}</b> <small>${esc(x.text)}</small>`, `${x.interviews}`, x.interviews ? "" : flag("not interviewed yet"))).join("")
-        + (noProf ? bar([{ n: noProf, cls: "grey" }], topP, `${noProf} interview(s) without a profile yet`, "<small>Profile not given yet</small>", `${noProf}`) : "")
-        + table(["Profile", "Interviews"], [...profs.map(x => [`${x.id}. ${x.text}`, x.interviews]), ...(noProf ? [["Profile not given yet", noProf]] : [])])
-        : none("No profile yet: add them under Question and profiles, or let the transcript check suggest one.")}</section>`;
+    const noProf = ivs.filter(iv => !Object.values(iv.speakers || {}).some(sp => sp.role === "interviewee" && sp.profile)).length;
     // Themes: in how many interviews each one is central, or mentioned.
     const ths = d?.themes || [], topT = max(ths.map(t => t.central + t.mentioned)), shown = ths.slice(0, 12);
     const themes = `<section class="card"><div class="chart-h"><h3>Themes</h3>${p.codebook.exists ? '<button class="small" data-nav-go="codebook">Open the theme list</button>' : ""}</div>
@@ -2527,7 +2613,6 @@ const screens = {
     const gaps = [];
     if (!ivs.length) gaps.push(["Add your first interview: drop a transcript below", 'data-jump="interviews"']);
     if (read) sqs.filter(x => x.findings < 3 && !x.other).forEach(x => gaps.push([`${x.id === "RQ" ? "The research question" : x.id} has little evidence (${x.findings} finding${x.findings === 1 ? "" : "s"})`, ""]));
-    profs.filter(x => !x.interviews).forEach(x => gaps.push([`No interview yet with profile ${x.id} (${x.role || x.text})`, ""]));
     if (noProf) gaps.push([`${noProf} interview${noProf > 1 ? "s have" : " has"} no profile yet`, ""]);
     if (interpreted) prs.filter(x => !tested(x)).forEach(x => gaps.push([`Not tested by any interview: “${x.text}”`, ""]));
     if (interpreted > 1 && !d?.stale && ths.some(t => t.central + t.mentioned)) { const thin = ths.filter(t => t.central + t.mentioned <= 1).length; if (thin) gaps.push([`${thin} theme${thin > 1 ? "s rest" : " rests"} on a single interview`, 'data-nav-go="codebook"']); }
@@ -2541,7 +2626,7 @@ const screens = {
         : '<p class="muted"><span style="color:var(--ok)">✓</span> Nothing obvious is missing: every question has evidence, every profile is interviewed, every conclusion is tested.</p>'}</section>`;
     return `${errorBox()}<div class="spread"><h2 class="pg" style="margin:0">${esc(p.name)}</h2><span class="row">${(d?.grid || []).length ? '<button class="small" data-act="slides">▶ Present</button>' : ""}<button class="small" data-nav-go="overviewText">Text version</button></span></div>
       <p class="lede" style="margin-top:4px">${esc(p.question)}</p>
-      ${freshCard(p)}${d ? `${kpis}<div class="dash">${missing}${covers}${who}${themes}${priors}</div>`
+      ${freshCard(p)}${d ? `${kpis}<div class="dash">${missing}${covers}${themes}${priors}</div>`
         : `<div class="error">The dashboard's numbers could not be loaded (${esc(dErr || "no answer")}). <button class="small" data-act="dash-retry">Try again</button>
             <button class="small" data-nav-go="overviewText">Open the text version</button></div>`}
       <section class="card" id="sec-interviews"><div class="spread"><h3 style="margin:0">Where every interview stands</h3>
@@ -3015,7 +3100,8 @@ async function act(name) {
     if (["approve-check", "approve-final", "codebook-approve"].includes(name)) await saveOpenEdits();
     switch (name) {
       case "home": return go("home");
-      case "slides": await openSlides(); return;  // awaited, so a failure shows its message
+      case "slides": await openSlides(); return;
+      case "intro": openIntro(); return;  // awaited, so a failure shows its message
       case "dash-retry": cache.dash = null; return render();
       case "tf-cancel": store.set(DRAFT_KEY, {}); tfBack = ""; tfError = ""; return go("home");
       case "key-open": keyOpen = true; await render(); document.getElementById("api-key")?.focus(); return;
