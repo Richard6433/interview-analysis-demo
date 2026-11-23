@@ -15,6 +15,7 @@
     --line: #dedbd2; --accent: #1e4f72; --accent-soft: #e3ecf3; --on-accent: #ffffff;
     --ok: #2f7a4b; --ok-soft: #e1f0e6; --warn: #9c5f08; --warn-soft: #faedd6;
     --bad: #b0322a; --bad-soft: #fbe5e2; --code: #f1efea; --quote: #b9893a;
+    --c1: #2c6fb3; --c2: #c2661c;  /* chart pair: checked for colour-blind readers */
     --g1: #2f6f8f; --g2: #7d5a9e; --g3: #3c8a6e; --g4: #ad6c35; --g5: #9a4a5a; --g6: #5a6aa8;
     --f-display: "Source Serif 4", Georgia, "Times New Roman", serif;
     --f-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
@@ -26,6 +27,7 @@
     --line: #2c333c; --accent: #8ab8da; --accent-soft: #1f2b37; --on-accent: #0e151c;
     --ok: #6cc790; --ok-soft: #1b2f24; --warn: #e0a84a; --warn-soft: #36291a;
     --bad: #ef8a80; --bad-soft: #3a2020; --code: #12161b; --quote: #d4a55a;
+    --c1: #4f8fd0; --c2: #c97a2e;
     --g1: #7fb3cf; --g2: #b79ad6; --g3: #79c3a6; --g4: #dea270; --g5: #d58a99; --g6: #9aa8e0;
     color-scheme: dark;
   }
@@ -324,6 +326,224 @@
           border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -1px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  /* Claude on this computer: a badge in the header, and the "Before you start" page. */
+  #claude-badge { font-size: 12.5px; padding: 3px 11px; border-radius: 999px; border: 0; white-space: nowrap; }
+  #claude-badge.ok { background: var(--ok-soft); color: var(--ok); }
+  #claude-badge.bad { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+  #claude-badge.wait { background: var(--code); color: var(--muted); }
+  .setup { max-width: 720px; margin: 0 auto; }
+  .card.checks { padding: 4px 18px; }
+  .card.checks.bad-b { border-color: var(--bad); }
+  .check-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 14px 0; border-top: 1px solid var(--line); }
+  .check-row:first-child { border-top: 0; }
+  .check-row .ic { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; }
+  .ic.ok { background: var(--ok-soft); color: var(--ok); } .ic.bad { background: var(--bad-soft); color: var(--bad); }
+  .ic.todo { border: 1.5px solid var(--muted); }
+  .check-row .help { grid-column: 2 / -1; background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .check-row .help p { margin: 8px 0 0; }
+  .needs p { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; margin: 10px 0; }
+  .needs p > span:first-child { color: var(--muted); }
+  /* The interview: the five phases as a bar, the chosen phase's steps, and the decision of the moment. */
+  ol.path.phasebar { margin: 16px 0 0; }
+  ol.path.phasebar b { font-weight: 400; }
+  ol.path.phasebar li.sel b { font-weight: 600; color: var(--text); }
+  ol.path.phasebar li.sel .node { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .pdec { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  ol.path li.you .pdec, .pdec.left { color: var(--warn); }
+  .phasecard .ph-h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .phasecard .ph-h h3 { margin: 0; font: 600 18px/1.3 var(--f-display); }
+  .srow > summary, div.srow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 9px 8px; border-top: 1px solid var(--line); list-style: none; color: var(--text); margin: 0; font-size: 15px; }
+  .srow > summary::-webkit-details-marker { display: none; }
+  .srow > summary:hover { background: var(--code); }
+  .srow[open] > summary { background: var(--code); }
+  div.srow.now { background: var(--warn-soft); border-radius: 6px; border-top-color: transparent; }
+  div.srow.now.running { background: var(--accent-soft); } div.srow.now.failed { background: var(--bad-soft); }
+  .sic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; }
+  .sic.done { background: var(--ok-soft); color: var(--ok); } .sic.todo { border: 1.5px solid var(--line); color: var(--muted); }
+  .sic.you { color: var(--warn); font-size: 14px; } .sic.running { color: var(--accent); } .sic.failed { background: var(--bad-soft); color: var(--bad); }
+  .st-who { color: var(--muted); font-size: 13px; }
+  .srow .stepcard { margin: 6px 0 12px 32px; }
+  .card.decide { border-color: var(--warn); }
+  .card.decide h3 { font: 600 17px/1.3 var(--f-display); }
+  .next-line { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+  /* The overview: every interview in the five phases, then the steps across the project. */
+  table.map th.ph { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  table.map td.cell { text-align: center; padding: 7px 4px; vertical-align: middle; }
+  table.map td { vertical-align: middle; }
+  .chip { display: inline-flex; gap: 4px; align-items: center; border: 0; border-radius: 999px; padding: 2px 10px; font-size: 12px;
+          white-space: nowrap; background: var(--code); color: var(--muted); cursor: pointer; }
+  .chip.done { background: var(--ok-soft); color: var(--ok); } .chip.you { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+  .chip.running { background: var(--accent-soft); color: var(--accent); } .chip.failed { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+  .chip:hover { text-decoration: underline; }
+  .cell .cn { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 10px; margin-top: 10px; }
+  .flow > div { border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .flow > .done { border-left-color: var(--ok); } .flow > .you { border-left-color: var(--warn); }
+  .flow > .running { border-left-color: var(--accent); } .flow > .failed { border-left-color: var(--bad); }
+  .flow button { align-self: flex-start; margin-top: auto; }
+  /* A new project, one question at a time (after Typeform): large type, one answer, Enter to go on. */
+  .tf { min-height: calc(100vh - 150px); display: flex; flex-direction: column; max-width: 700px; margin: 0 auto; }
+  .tf-bar { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: var(--accent-soft); z-index: 25; }
+  .tf-bar span { display: block; height: 100%; background: var(--accent); transition: width .35s ease; }
+  .tf-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .tf-crumb { font-size: 13px; color: var(--muted); letter-spacing: .02em; }
+  .tf-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 36px 0 90px; }
+  .tf-stage.up { animation: tfUp .4s cubic-bezier(.2, .7, .2, 1) both; } .tf-stage.down { animation: tfDown .4s cubic-bezier(.2, .7, .2, 1) both; }
+  @keyframes tfUp { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+  @keyframes tfDown { from { opacity: 0; transform: translateY(-32px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .tf-stage.up, .tf-stage.down { animation: none; } .tf-bar span { transition: none; } }
+  .tf-q { display: grid; grid-template-columns: 48px minmax(0, 1fr); }
+  .tf-num { color: var(--accent); font-size: 15px; font-weight: 600; padding-top: 9px; white-space: nowrap; }
+  .tf-title { display: block; font: 400 27px/1.3 var(--f-body); color: var(--text); margin: 0 0 8px; text-wrap: balance; letter-spacing: -.01em; }
+  .tf-req { color: var(--accent); }
+  .tf-help { color: var(--muted); font-size: 17px; line-height: 1.5; margin: 0 0 28px; max-width: 60ch; }
+  input.tf-input, textarea.tf-input { width: 100%; border: 0; border-bottom: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 0;
+    background: transparent; font: 400 25px/1.4 var(--f-body); color: var(--accent); padding: 4px 0 10px; }
+  input.tf-input:focus, textarea.tf-input:focus, .tf-input:focus-visible { outline: none; border-bottom-color: var(--accent); }
+  .tf-input::placeholder { color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  textarea.tf-input { resize: none; min-height: 0; field-sizing: content; max-height: 42vh; }
+  input.tf-input.sm { font-size: 18px; padding-bottom: 6px; }
+  .tf-ok { display: flex; align-items: center; gap: 16px; margin-top: 26px; flex-wrap: wrap; }
+  .tf-btn { font-size: 18px; font-weight: 600; padding: 9px 22px; }
+  .tf-key { font-size: 13px; color: var(--muted); }
+  .tf-skip { border: 0; background: none; color: var(--accent); padding: 4px 2px; font-size: 15px; }
+  .tf-skip:hover { text-decoration: underline; }
+  .tf-err { margin-top: 12px; display: inline-flex; background: var(--bad-soft); color: var(--bad); padding: 5px 11px; border-radius: 4px; font-size: 14px; }
+  .tf-choices { display: flex; flex-direction: column; gap: 9px; max-width: 480px; }
+  .tf-choice { display: flex; align-items: center; gap: 12px; text-align: left; font-size: 18px; padding: 9px 12px; border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--accent); }
+  .tf-choice:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+  .tf-choice.sel { border: 2px solid var(--accent); padding: 8px 11px; }
+  .tf-choice .tf-tick { margin-left: auto; font-weight: 700; }
+  .tf-letter { font: 600 12px/1 var(--f-mono); border: 1px solid currentColor; border-radius: 4px; padding: 4px 6px; min-width: 26px; text-align: center;
+    background: var(--surface); color: var(--accent); flex: none; }
+  .tf-prof { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; margin-bottom: 16px; }
+  .tf-nav { position: fixed; right: 22px; bottom: 22px; display: flex; gap: 1px; z-index: 5; }
+  .tf-nav button { background: var(--accent); color: var(--on-accent); border: 0; width: 40px; height: 36px; padding: 0; font-size: 22px; line-height: 1; border-radius: 0; }
+  .tf-nav button:first-child { border-radius: 6px 0 0 6px; } .tf-nav button:last-child { border-radius: 0 6px 6px 0; }
+  .tf-review { display: flex; flex-direction: column; border-bottom: 1px solid var(--line); }
+  .tf-rrow { display: grid; grid-template-columns: 190px minmax(0, 1fr) auto; gap: 14px; text-align: left; border: 0; border-top: 1px solid var(--line);
+    background: none; padding: 13px 6px; border-radius: 0; color: var(--text); font-size: 16px; }
+  .tf-rrow:hover, .tf-rrow:focus-visible { background: var(--accent-soft); }
+  .tf-rrow .k { color: var(--muted); font-size: 14px; padding-top: 2px; } .tf-rrow .v { white-space: pre-line; overflow-wrap: anywhere; }
+  .tf-edit { color: var(--accent); opacity: .7; }
+  @media (max-width: 600px) { .tf-q { grid-template-columns: minmax(0, 1fr); } .tf-num { padding: 0 0 6px; } .tf-title { font-size: 22px; }
+    input.tf-input, textarea.tf-input { font-size: 21px; } .tf-prof { grid-template-columns: minmax(0, 1fr); gap: 8px; } .tf-rrow { grid-template-columns: minmax(0, 1fr) auto; }
+    .tf-rrow .k { grid-column: 1 / -1; } .tf-nav { right: 16px; bottom: 16px; } }
+  /* The dashboard: the numbers first, then what the interviews cover and what is still missing. */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .kpi .l { font-size: 13px; color: var(--muted); }
+  .kpi .v { font: 600 30px/1.15 var(--f-body); margin: 4px 0 2px; color: var(--text); }
+  .kpi .s { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  .dash { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(390px, 100%), 1fr)); gap: 14px; margin-bottom: 14px; }
+  .dash .card { margin: 0; } .dash .card.wide { grid-column: 1 / -1; }
+  .btrack { flex-wrap: nowrap; }
+  .chart-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .chart-h h3 { margin: 0; } .chart-h .muted { font-size: 12px; }
+  .chart-sub { font-size: 13px; color: var(--muted); margin: 3px 0 12px; }
+  .brow { display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 12px; align-items: center; padding: 5px 4px; border-radius: 4px; }
+  .brow:hover, .brow:focus-visible, .prow:hover, .prow:focus-visible { background: var(--code); outline: none; }
+  .bl { font-size: 13.5px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .bl small { color: var(--muted); font-size: 12.5px; }
+  .btrack { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+  .bbar { display: flex; gap: 2px; height: 14px; flex: none; min-width: 4px; }
+  .bseg { height: 100%; background: var(--c1); min-width: 2px; }
+  .bseg:last-child { border-radius: 0 4px 4px 0; }
+  .bseg.light, .sw.light { background: color-mix(in srgb, var(--c1) 38%, var(--surface)); }
+  .bseg.grey { background: color-mix(in srgb, var(--muted) 45%, var(--surface)); }
+  .bzero { width: 2px; height: 14px; background: var(--line); flex: none; }
+  .bval { font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .flag { font-size: 11.5px; color: var(--warn); background: var(--warn-soft); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+  .legend-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .sw.mid, .dbar .mid { background: color-mix(in srgb, var(--muted) 45%, var(--surface)); }
+  .prow { padding: 7px 4px; border-top: 1px solid var(--line); border-radius: 4px; }
+  .prow .bl { margin-bottom: 6px; -webkit-line-clamp: 3; }
+  .dbar { display: flex; gap: 2px; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 4px; }
+  .dbar .sup, .sw.sup { background: var(--c1); } .dbar .con, .sw.con { background: var(--c2); }
+  ul.gaps { list-style: none; margin: 8px 0 0; padding: 0; }
+  ul.gaps li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); align-items: baseline; font-size: 14px; }
+  ul.gaps li:first-child { border-top: 0; }
+  .gi { color: var(--warn); }
+  details.astable { margin-top: 8px; } details.astable summary { font-size: 12.5px; }
+  #ctip { position: fixed; z-index: 40; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px; line-height: 1.4;
+          padding: 6px 9px; border-radius: 6px; max-width: 300px; }
+  @media (max-width: 560px) { .brow { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+  /* The theme analysis: a grid of themes by interview, and a preview of the chosen theme beside it. */
+  .tgrid-wrap { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 1000px) { .tgrid-wrap { grid-template-columns: minmax(0, 1fr); } }
+  table.tgrid { width: auto; border-collapse: separate; border-spacing: 0; }
+  table.tgrid th { font-size: 11.5px; color: var(--muted); font-weight: 600; border-top: 0; padding: 4px 3px; white-space: nowrap; }
+  table.tgrid td { border-top: 1px solid var(--line); padding: 3px; vertical-align: middle; }
+  table.tgrid tr.sel td { background: var(--accent-soft); }
+  .tname { min-width: 160px; max-width: 260px; }
+  .tpick { border: 0; background: none; padding: 3px 4px; text-align: left; font-size: 13.5px; color: var(--text); line-height: 1.3; width: 100%; }
+  .tpick:hover { color: var(--accent); text-decoration: underline; }
+  .tpick small { display: block; color: var(--muted); font-size: 11.5px; }
+  tr.sel .tpick { font-weight: 600; }
+  .tn { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; padding-right: 8px !important; white-space: nowrap; }
+  .tc { text-align: center; width: 28px; }
+  .hc { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 4px; font-size: 12px; font-style: normal; line-height: 1;
+        background: var(--surface); border: 1px solid var(--line); color: var(--muted); vertical-align: middle; }
+  .hc.sm { width: 14px; height: 14px; font-size: 9px; margin-right: 5px; vertical-align: -2px; }
+  .hc.r3 { background: var(--c1); border-color: var(--c1); color: #fff; }
+  .hc.r2 { background: color-mix(in srgb, var(--c1) 50%, var(--surface)); border-color: transparent; color: var(--text); }
+  .hc.r1 { background: color-mix(in srgb, var(--c1) 18%, var(--surface)); border-color: transparent; color: var(--text); }
+  .tprev { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--bg); max-height: 560px; overflow: auto; }
+  .tdl { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 10px; margin: 10px 0; font-size: 14px; }
+  .tdl dt { color: var(--muted); font-size: 12.5px; padding-top: 2px; } .tdl dd { margin: 0; }
+  .pi { border-top: 1px solid var(--line); padding: 9px 0; font-size: 14px; }
+  .pi-t { margin-top: 3px; }
+  .patrow > summary { display: grid; grid-template-columns: 120px 44px minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 4px; border-top: 1px solid var(--line);
+    list-style: none; color: var(--text); margin: 0; font-size: 14px; }
+  .patrow > summary::-webkit-details-marker { display: none; }
+  .patrow > summary:hover, .patrow[open] > summary { background: var(--code); }
+  .pbar { height: 10px; background: color-mix(in srgb, var(--c1) 12%, var(--surface)); border-radius: 0 4px 4px 0; overflow: hidden; }
+  .pbar span { display: block; height: 100%; background: var(--c1); border-radius: 0 4px 4px 0; }
+  .patrow[open] { padding-bottom: 6px; }
+  @media (max-width: 560px) { .patrow > summary { grid-template-columns: 80px 40px minmax(0, 1fr); } }
+  /* Slides in the page. */
+  #deck { position: fixed; inset: 0; z-index: 60; background: #11161c; color: #f3f4f6; display: flex; flex-direction: column; }
+  body.deck-open { overflow: hidden; }
+  .deck-top, .deck-bot { display: flex; align-items: center; gap: 10px; padding: 10px 18px; font-size: 13px; color: #aeb6c0; }
+  .deck-bot { justify-content: center; }
+  #deck button { background: transparent; border: 1px solid #3a4450; color: #e5e8ec; padding: 5px 12px; font-size: 13px; }
+  #deck button:disabled { opacity: .35; }
+  .deck-bot button { font-size: 20px !important; width: 44px; padding: 2px 0 !important; }
+  .deck-n { font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; }
+  .slide { flex: 1; margin: 0 auto; width: min(1180px, calc(100vw - 32px), calc((100vh - 130px) * 16 / 9)); aspect-ratio: 16 / 9; align-self: center;
+           background: #fbfaf7; color: #1c2430; border-radius: 10px; padding: clamp(20px, 4.5%, 64px); overflow: hidden; display: flex; flex-direction: column;
+           justify-content: center; box-shadow: 0 20px 60px rgba(0,0,0,.4); --c1: #2c6fb3; --surface: #fbfaf7; --text: #1c2430; flex: none; }
+  .slide h2 { font: 600 clamp(22px, 3.2vw, 40px)/1.15 var(--f-display); margin: 0 0 .6em; color: #1c2430; }
+  .sl-title h1 { font: 600 clamp(30px, 4.6vw, 58px)/1.1 var(--f-display); margin: .2em 0 .35em; }
+  .sl-kicker { text-transform: uppercase; letter-spacing: .12em; font-size: clamp(11px, 1.1vw, 14px); color: #2c6fb3; font-weight: 600; }
+  .sl-q { font-size: clamp(16px, 1.9vw, 24px); color: #3d4654; max-width: 46ch; margin: 0; }
+  .sl-meta { margin-top: 2em; color: #6b7480; font-size: clamp(12px, 1.2vw, 15px); }
+  .sl-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3%; }
+  .sl-kpis b { display: block; font: 600 clamp(34px, 5.5vw, 72px)/1 var(--f-body); color: #1c2430; }
+  .sl-kpis span { color: #5b6472; font-size: clamp(12px, 1.3vw, 17px); }
+  .sl-list { margin: 0; padding-left: 1.1em; font-size: clamp(14px, 1.6vw, 21px); line-height: 1.4; }
+  .sl-list li { margin: 0 0 .55em; } .sl-list b { margin-right: .35em; }
+  .sl-big { font-size: clamp(15px, 1.7vw, 22px); line-height: 1.5; max-width: 60ch; margin: 0; display: -webkit-box; -webkit-line-clamp: 9; -webkit-box-orient: vertical; overflow: hidden; }
+  .sl-sub { color: #5b6472; margin: -.4em 0 1em; font-size: clamp(12px, 1.3vw, 16px); }
+  .sl-bars { display: flex; flex-direction: column; gap: .55em; }
+  .sl-bar { display: grid; grid-template-columns: 34% minmax(0, 1fr) 70px; gap: 14px; align-items: center; font-size: clamp(12px, 1.35vw, 17px); }
+  .sl-bl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sl-track { display: flex; gap: 2px; height: clamp(10px, 1.4vw, 18px); }
+  .sl-track .bseg:last-child { border-radius: 0 4px 4px 0; }
+  .sl-v { color: #5b6472; font-variant-numeric: tabular-nums; }
+  .sl-themes { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em 3%; font-size: clamp(13px, 1.4vw, 18px); }
+  .sl-themes p { margin: .3em 0 0; color: #3d4654; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .sl-in { color: #2c6fb3; font-size: .85em; font-weight: 600; white-space: nowrap; }
+  .tgrid-wrap.stack { grid-template-columns: minmax(0, 1fr); }
+  .tname { min-width: 130px; max-width: 220px; }
+  .slide { overflow: auto; justify-content: safe center; }
+  .sl-list li > span.cl { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  @media (max-width: 700px) { .slide { aspect-ratio: auto; width: calc(100vw - 20px); height: calc(100vh - 120px); padding: 22px; } .sl-kpis { grid-template-columns: 1fr 1fr; gap: 16px; }
+    .sl-themes { grid-template-columns: minmax(0, 1fr); } .sl-bar { grid-template-columns: 40% minmax(0, 1fr) 44px; } }
+  @media (max-width: 600px) { .tf-nav { position: static; justify-content: flex-end; margin: 0 0 16px; } .tf-stage { padding-bottom: 24px; } }
   #demo-bar { background: var(--warn-soft); color: var(--text); border-bottom: 1px solid var(--line); font-size: 13.5px;
               padding: 8px max(16px, env(safe-area-inset-left, 0px)); display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; }
   #demo-bar button { font-size: 13px; padding: 3px 10px; }
@@ -335,6 +555,7 @@
   <h1 id="home-link" title="Back to my projects" tabindex="0" role="link"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h12M4 10h8M4 15h10"/><circle cx="16.5" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg>Interview analysis</h1>
   <span class="crumb" id="crumb"></span>
   <span class="saved" id="saved" aria-live="polite"></span>
+  <button id="claude-badge" type="button" class="wait" title="Before you start: what the platform needs on this computer">Checking Claude…</button>
   <button id="theme-toggle" type="button" aria-label="Switch between light and dark">Dark</button>
 </header>
 <div id="demo-bar" role="note"><b>Demo</b> · three invented interviews · the AI agents are simulated (each step takes seconds, not minutes) ·
@@ -711,13 +932,54 @@
     return hits;
   }
 
+  // "Before you start": in the demo, Claude is simulated and always ready; no key is ever saved.
+  const CLAUDE = { installed: true, version: "demo", logged_in: true, plan: "demo", unknown: false, key: "", env_key: "", ready: true, billing: "subscription" };
+  // The dashboard's numbers, worked out the same way as the platform's dashboard() in app.py.
+  function dashboard(p) {
+    const sq = { RQ: { label: "Research question", text: p.question, findings: 0, interviews: new Set() } };
+    (p.sub_questions || []).forEach((t, i) => { sq[`SQ${i + 1}`] = { label: `SQ${i + 1}`, text: t, findings: 0, interviews: new Set() }; });
+    const cb = p.cb?.data || {}, themes = {};
+    (cb.themes || []).forEach(t => { themes[t.id] = { id: t.id, name: t.name || t.id, group: "", gid: "", central: 0, mentioned: 0 }; });
+    (cb.groups || []).forEach(g => (g.themes || []).forEach(tid => { if (themes[tid]) { themes[tid].group = g.name || g.id; themes[tid].gid = g.id; } }));
+    const priors = (p.priors || []).map(t => ({ text: t, supports: 0, complicates: 0, contradicts: 0 }));
+    const words = (t) => new Set(String(t || "").toLowerCase().match(/[a-z]{4,}/g) || []);
+    const near = (t) => { const w = words(t); let best = -1, score = 0.4;
+      priors.forEach((x, i) => { const v = words(x.text), both = [...w].filter(a => v.has(a)).length / Math.max(1, Math.min(w.size, v.size)); if (both >= score) { score = both; best = i; } });
+      return best; };
+    const current = !!(p.cb && p.cb.approved);
+    let stale = 0, unmatched = 0, misses = 0;
+    const grid = [];
+    p.interviews.forEach(iv => {
+      allCodes(p, iv).forEach(c => { const m = /SQ\s*(\d+)/i.exec(c.sub_question || ""); const k = m && sq[`SQ${m[1]}`] ? `SQ${m[1]}` : "RQ"; sq[k].findings++; sq[k].interviews.add(iv.slug); });
+      const d = p.data[iv.slug] || {}, codings = (d.recode?.theme_codings || []).filter(c => c.theme_id);
+      if (codings.length && !current) stale++;
+      else if (codings.length) {
+        grid.push({ slug: iv.slug, n: iv.n, label: iv.label, approved: !!iv.final_approved,
+          themes: Object.fromEntries(codings.map(c => [c.theme_id, { rel: c.relevance || "", summary: c.summary || "", quote: c.best_quote?.text || "" }])) });
+        misses += (d.recode.themes_the_codebook_misses || []).length;
+        codings.forEach(c => { const t = themes[c.theme_id]; if (t && c.relevance === "primary") t.central++; else if (t && c.relevance === "secondary") t.mentioned++; });
+      }
+      (d.latent?.desk_research_check || []).forEach(x => { const k = near(x.prior_conclusion), v = x.does_this_interview_support_it;
+        if (!["supports", "complicates", "contradicts"].includes(v)) return; if (k >= 0) priors[k][v]++; else unmatched++; });
+    });
+    const used = {};
+    p.interviews.forEach(iv => Object.values(iv.speakers || {}).forEach(sp => { if (sp.role === "interviewee" && sp.profile?.id) used[sp.profile.id] = (used[sp.profile.id] || 0) + 1; }));
+    return { sub_questions: Object.entries(sq).map(([id, v]) => ({ id, ...v, interviews: v.interviews.size })),
+      themes: Object.values(themes).sort((a, b) => b.central - a.central || b.mentioned - a.mentioned || a.id.localeCompare(b.id)),
+      priors, profiles: (p.profiles || []).map(pr => ({ id: pr.id, text: profileText(pr), role: pr.role || "", interviews: used[pr.id] || 0 })),
+      misses, stale, unmatched, findings: Object.values(sq).reduce((n, v) => n + v.findings, 0), grid,
+      groups: (cb.groups || []).map(g => ({ id: g.id, name: g.name, themes: g.themes || [] })) };
+  }
+
   function get(path, qs) {
+    if (path[0] === "claude") return json(CLAUDE);
     if (path.length === 1) return json(S.projects.map(p => ({ id: p.id, name: p.name, question: p.question, updated: p.updated, interviews: p.interviews.length })));
     const p = proj(path[1]);
     if (path.length === 2) return json(view(p));
     const [, , what, kind, a, b] = path;
     if (what === "log") return text(logFor(p, kind));
     if (what === "quotes") return json(quotes(p));
+    if (what === "dashboard") return json(dashboard(p));
     if (what === "search") return json(search(p, qs.get("q") || ""));
     if (what === "export") {
       const c = qs.get("content"), n = p.interviews.find(iv => iv.slug === qs.get("interview"))?.n;
@@ -796,6 +1058,12 @@
   }
 
   function post(path, b) {
+    if (path[0] === "claude") {
+      if (path[1] === "test") return json({ ok: true, seconds: 0, message: "In the demo, Claude is simulated: in the platform, this asks Claude one short question." });
+      if (path[1] === "key") throw err("The demo never saves a key. In the platform, the key stays on your own computer, outside the projects.");
+      if (path[1] === "login") throw err("In the demo, there is nothing to log in to: Claude is simulated.");
+      throw err("Not found", 404);
+    }
     if (path.length === 1) {  // a new project
       const name = String(b.name || "").trim(), question = String(b.question || "").trim();
       if (!name || !question) throw err("A project needs a name and a research question.");
@@ -1053,10 +1321,96 @@ async function load() {
     view = { screen: "home" }; project = null;
   }
   try { projects = await api("projects"); } catch { projects = []; }
+  if (claude && Date.now() - claudeAt > 180000) checkClaude();  // looked at again every few minutes, quietly
   await render();
   yourTurn();
   if (project && (project.running || project.interviews.some(i => i.status === "extracting")))
     pollTimer = setTimeout(poll, 3000);
+}
+
+// ---------------------------------------------------------------- Claude on this computer
+// Asked when the page opens (and every few minutes): is Claude Code installed, and logged in? If not,
+// the "Before you start" page opens once per visit; the badge at the top always leads back to it.
+let claude = null, claudeAt = 0, claudeTest = null, loginStarted = false, loginTimer = null, setupReturn = null, keyOpen = false;
+const SETUP_KEY = "analysis-setup-seen";
+const claudeReady = () => !!(claude && claude.ready);
+async function checkClaude(fresh = false) {
+  claudeAt = Date.now();
+  try { claude = await api("claude" + (fresh ? "?fresh=1" : "")); } catch {}
+  showBadge();
+}
+function showBadge() {
+  const b = document.getElementById("claude-badge");
+  if (!claude) { b.className = "wait"; b.textContent = "Checking Claude…"; return; }
+  b.className = claudeReady() ? "ok" : "bad";
+  const unsure = claude.unknown && !claude.logged_in && claude.billing !== "key";
+  if (unsure) b.className = "wait";
+  b.textContent = unsure ? "? Claude login not confirmed"
+    : claudeReady() ? `✓ Claude ready · ${claude.billing === "key" ? "your API key" : claude.plan || "subscription"}` : claude.installed ? "✕ Not logged in" : "✕ Claude Code not found";
+}
+function openSetup() {
+  if (view.screen !== "setup") { setupReturn = view; navStack.push(view); saveNav(); }
+  show({ screen: "setup" }, true);
+}
+document.getElementById("claude-badge").addEventListener("click", openSetup);
+
+// ---------------------------------------------------------------- the new project, one question at a time
+// After Typeform: one question per screen in large type, Enter to go on, a progress bar, and every
+// answer checked on a last page before the project is made. The answers are kept as you type.
+const draft = () => store.get(DRAFT_KEY, {});
+const setDraft = (change) => { const d = { ...draft(), ...change }; store.set(DRAFT_KEY, d); return d; };
+const newSteps = () => [...(projects.length ? ["from"] : []), "name", "question", "subs", "priors", "profiles", "review"];
+let tfDir = 1, tfError = "", tfBack = "";
+function draftProfiles() {
+  if (!document.querySelector("[data-np]")) return draft().profiles || [];
+  const rows = {};
+  document.querySelectorAll("[data-np]").forEach(el => { (rows[el.dataset.np] ||= {})[el.dataset.npk] = el.value; });
+  return Object.keys(rows).sort((a, b) => a - b).map(k => rows[k]);
+}
+let tfArrived = 0;  // when the current question appeared: an Enter right after it belongs to the one before
+function tfFocus() {
+  tfArrived = Date.now();
+  const el = app.querySelector(".tf-stage .tf-input, .tf-stage .tf-choice.sel, .tf-stage .tf-choice");
+  if (!el) { document.activeElement?.blur?.(); return; }
+  el.focus({ preventScroll: true });
+  if (el.value && el.setSelectionRange) { try { el.setSelectionRange(el.value.length, el.value.length); } catch {} }
+}
+// to: +1 (OK), -1 (back) or a question's name (from the last page). A needed answer left empty stops here.
+async function tfGo(to) {
+  const steps = newSteps(), d = draft(), at = steps.includes(d.at) ? d.at : steps[0], i = steps.indexOf(at);
+  if (to === 1) {
+    if (at === "name" && !(d.name || "").trim()) { tfError = "Please fill this in: a project needs a name."; await render(); return tfFocus(); }
+    if (at === "question" && !(d.question || "").trim()) { tfError = "Please fill this in: every agent reads the research question first."; await render(); return tfFocus(); }
+    if (at === "profiles") {
+      const k = draftProfiles().findIndex(pr => !(pr.role || "").trim() && ((pr.org_type || "").trim() || (pr.sector || "").trim()));
+      if (k >= 0) { tfError = `Give profile P${k + 1} a role, or empty its row: every profile needs a role.`; await render(); return tfFocus(); }
+    }
+  }
+  let next = typeof to === "string" ? to : steps[Math.min(steps.length - 1, Math.max(0, i + to))];
+  if (to === 1 && tfBack) { next = tfBack; tfBack = ""; }  // changed from the last page: back to it
+  if (typeof to === "string") tfBack = "review";
+  if (to === -1) tfBack = "";
+  tfError = ""; errorMsg = ""; tfDir = steps.indexOf(next) >= i ? 1 : -1;
+  setDraft({ at: next }); lastRendered = "";
+  await render(); tfFocus();
+}
+async function tfFrom(id) {
+  const d = draft();
+  try {
+    // Only answers that are empty, or still exactly as copied, are filled or cleared.
+    const keys = ["question", "subs", "priors", "profiles"], same = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+    const blank = (k) => k === "profiles" ? !(d.profiles || []).some(pr => pr.role || pr.org_type || pr.sector) : !String(d[k] || "").trim();
+    const mine = (k) => !blank(k) && !(d.copied && same(d[k], d.copied[k]));
+    if (!id) setDraft({ from: "", copied: null, ...Object.fromEntries(keys.filter(k => !mine(k)).map(k => [k, k === "profiles" ? [] : ""])) });
+    else {
+      const src = await api("projects/" + id);
+      const copied = { question: src.question, subs: src.sub_questions.join("\n"), priors: src.priors.join("\n"),
+                       profiles: (src.profiles || []).map(({ role, org_type, sector }) => ({ role, org_type, sector })) };
+      setDraft({ from: src.id, copied, ...Object.fromEntries(keys.filter(k => !mine(k)).map(k => [k, copied[k]])) });
+      note(keys.some(mine) ? `Copied from ${src.name}, keeping what you typed` : `Copied from ${src.name}`);
+    }
+  } catch (err) { return showError(err.message); }
+  return tfGo(1);
 }
 
 // ---------------------------------------------------------------- pieces
@@ -1167,36 +1521,46 @@ function sidebar(p) {
     ${link(cur("new"), 'data-new="1"', "+ New project")}`;
   if (!p) return home + list;
   const IV_SCREENS = ["interview", "step", "check", "codes", "final", "speakers", "split", "transcript"];
-  const n = queue(p).length;
-  // The project in three zones: what you gave (Inputs), what the AI made (Analysis), what comes out (Results).
+  const n = queue(p).length, ivs = visibleInterviews(p);
+  const dot = (st) => `<span class="dot ${st}" aria-hidden="true">${ICON[st]}</span>`;
+  const [cb, cross, report] = projectSteps(p);
+  const results = [cross, report].some(x => x.state === "running") ? "running" : report.state === "done" ? "done" : cross.state === "done" ? "you" : "todo";
+  // The project as you work it: what waits for you, the overview, each interview, then what they make together.
   return `${home}<div class="side-proj">${esc(p.name)}</div>
     <input type="search" id="psearch" placeholder="Search this project…" aria-label="Search this project" value="${esc(view.screen === "search" ? view.step || "" : "")}">
     ${link(`${cur("review")} ${n ? "rv" : ""}`, 'data-nav="review"', n ? `Review <span class="rvn">${n} waiting</span>` : "Review")}
-    ${link(cur("project"), 'data-nav="project"', "Inputs", `<span class="zone" aria-hidden="true">A</span>`)}
-    ${link(cur("analysis"), 'data-nav="analysis"', "Analysis", `<span class="zone" aria-hidden="true">B</span>`)}
-    ${visibleInterviews(p).map(iv => { const st = ivStatus(p, iv);
+    ${link(cur("project", "analysis"), 'data-nav="project"', "Overview")}
+    ${link(`${cur("overviewText")} ivl`, 'data-nav="overviewText"', "Text version (to compare)")}
+    <div class="side-sub">Interviews</div>
+    ${ivs.map(iv => { const st = ivStatus(p, iv);
       return link(view.slug === iv.slug && IV_SCREENS.includes(view.screen) ? "cur ivl" : "ivl", `data-iv="${esc(iv.slug)}" title="${esc(ivWord(p, iv, st))}"`,
-                  esc(iv.label), `<span class="dot ${st.state}" aria-hidden="true">${ICON[st.state]}</span>`); }).join("")}
-    ${link(`${cur("codebook")} ivl tl`, `data-nav="codebook" ${p.codebook.exists ? "" : "disabled"}`, "Theme list", `<span class="dot ${p.codebook.approved ? "done" : p.codebook.exists ? "you" : "todo"}" aria-hidden="true">${ICON[p.codebook.approved ? "done" : p.codebook.exists ? "you" : "todo"]}</span>`)}
-    ${link(cur("results", "cross"), 'data-nav="results"', "Results", `<span class="zone" aria-hidden="true">C</span>`)}
+                  esc(iv.label), dot(st.state)); }).join("")}
+    ${ivs.length ? "" : link("ivl", 'data-nav="project"', "+ Add interviews")}
+    ${link(`${cur("codebook")} tl`, `data-nav="codebook" ${p.codebook.exists ? "" : "disabled"}`, "Theme list", dot(cb.state))}
+    ${link(cur("results", "cross"), 'data-nav="results"', "Results", dot(results))}
+    ${link(cur("context"), 'data-nav="context"', "Question and profiles")}
     ${link(cur("tech", "general", "prompts", "log"), 'data-nav="tech"', "Technical details")}
     <div class="side-foot">${list}</div>`;
 }
 
-// Where the project stands, in six stages, and the one thing to do next.
-function stages(p) {
-  const ivs = visibleInterviews(p);
-  const st = (iv, id) => (p.steps[iv.slug] || []).find(x => x.id === id)?.state;
-  const any = (ids, state) => ivs.some(iv => ids.some(id => st(iv, id) === state) || (state === "failed" && iv.status === "error" && ids.includes("extract")));
-  const stage = (ids, done) => any(ids, "failed") ? "failed" : any(ids, "running") ? "running" : any(ids, "you") ? "you" : done ? "done" : "todo";
-  const ready = ivs.filter(iv => iv.check_approved).length, approved = ivs.filter(iv => iv.final_approved).length;
+// The steps across the whole project, once interviews are read: the shared theme list, the comparison, the report.
+function projectSteps(p) {
+  const approved = visibleInterviews(p).filter(iv => iv.final_approved).length, cb = p.codebook;
+  const failed = (j) => (j || {}).status === "failed";
+  const s = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   return [
-    { zone: "A", name: "Inputs", go: "project", count: ivs.length ? `${ready} of ${ivs.length} checked by you` : "add interviews",
-      state: ivs.length ? stage(["extract", "speakers", "check", "confirm-check"], ready === ivs.length) : "you" },
-    { zone: "B", name: "Analysis", go: "analysis", count: ivs.length ? `${approved} of ${ivs.length} approved` : "",
-      state: stage(["readers", "checks", "themes", "approve-themes", "reread", "latent", "approve-final"], ivs.length > 0 && approved === ivs.length) },
-    { zone: "C", name: "Results", go: "results", count: p.reports.length ? "report built" : p.cross.exists ? "cross-analysis ready" : "",
-      state: ["cross", "report"].includes(p.running) ? "running" : p.cross.exists && p.reports.length ? "done" : p.cross.exists ? "you" : "todo" },
+    { id: "codebook", name: "Theme list", who: "agent", go: `data-nav-go="codebook" ${cb.exists ? "" : "disabled"}`,
+      state: busyWith(p, "codebook") ? "running" : failed(p.jobs?.codebook) ? "failed" : cb.approved ? "done" : cb.exists ? "you" : "todo",
+      line: cb.exists ? `${s(cb.themes, "theme", "themes")} from ${s(cb.includes.length, "interview", "interviews")} · ${cb.approved ? "approved by you" : "waits for your approval"}`
+        : "An agent groups the findings of every interview into themes, once the first interview has been read." },
+    { id: "cross", name: "Comparison of the interviews", who: "agent", go: 'data-nav-go="results"',
+      state: busyWith(p, "cross") ? "running" : failed(p.cross.job) ? "failed" : p.cross.exists ? "done" : "todo",
+      line: p.cross.exists ? `Compares ${s(p.cross.built_from.length, "approved interview", "approved interviews")}, theme by theme.`
+        : `An agent compares the approved interviews. It runs by itself once 2 are approved (${approved} so far).` },
+    { id: "report", name: "Findings report (Word)", who: "agent", go: 'data-nav-go="results"',
+      state: busyWith(p, "report") ? "running" : failed(p.report_job) ? "failed" : p.reports.length ? "done" : p.cross.exists ? "you" : "todo",
+      line: p.reports.length ? `${s(p.reports.length, "version", "versions")} built, each also in a shareable copy without quotes or names.`
+        : p.cross.exists ? "Ready: you start it on the Results page." : "Written from the approved interviews and the comparison." },
   ];
 }
 // What the platform is doing right now, in words, with a link to where it shows.
@@ -1234,15 +1598,10 @@ function nextAction(p) {
       : `<button class="primary" data-nav-go="results">Open the results →</button>`;
   return `<span class="muted">Nothing waits for you.</span>`;
 }
-const ZONE_OF = { project: "Inputs", analysis: "Analysis", interview: "Analysis", step: "Analysis", check: "Inputs", codes: "Analysis",
-  final: "Analysis", speakers: "Inputs", split: "Analysis", transcript: "Inputs", codebook: "Analysis", results: "Results", cross: "Results" };
 function stepper(p) {
-  const here = ZONE_OF[view.screen];
   // Decision pages carry their own primary action (Approve, Confirm): no second one competes with it.
   const own = ["review", "check", "codebook", "final", "speakers"].includes(view.screen);
-  return `<nav class="stepper" aria-label="Where the project stands"><button class="small back" data-act="back" aria-label="Back to the previous page">← Back</button><ol>${stages(p).map(x => `<li class="${x.state} ${x.name === here ? "here" : ""}">
-      <button data-nav-go="${x.go}" ${x.name === here ? 'aria-current="step"' : ""} title="${esc(STATE[x.state][1])}"><span class="sn">${ICON[x.state]}</span>
-        <span class="zone" aria-hidden="true">${x.zone}</span>${x.name}${x.count ? `<span class="stc">${esc(x.count)}</span>` : ""}</button></li>`).join("")}</ol>
+  return `<nav class="stepper" aria-label="Back, and what to do next"><button class="small back" data-act="back" aria-label="Back to the previous page">← Back</button>
     ${own ? "" : `<div class="next-act">${nextAction(p)}</div>`}</nav>`;
 }
 // The latest findings report as two buttons; earlier versions folded (on Results).
@@ -1439,8 +1798,226 @@ function consentCard(m, done) {
       : '<p class="muted">No passage was asked to be kept off the record.</p>'}</div>`;
 }
 
+// Who is who: one row per speaker label found in the transcript, pre-filled until the researcher confirms.
+function speakerTable(iv) {
+  const labels = (iv.speaker_labels || []).length ? iv.speaker_labels : [{ label: "(no speaker names)", words: iv.words }];
+  const set = iv.speakers_set ? (iv.speakers || {}) : guessSpeakers(project, iv, labels);
+  const roleSel = (l) => `<select data-sp-role="${esc(l)}" aria-label="Role of ${esc(l)}">
+      <option value="">Choose…</option>
+      ${[["interviewer", "Listens: interviewer"], ["interviewee", "Speaks: interviewee"], ["other", "Someone else"]]
+        .map(([v, t]) => `<option value="${v}" ${set[l]?.role === v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+  const profSel = (l) => `<select data-sp-prof="${esc(l)}" aria-label="Profile of ${esc(l)}">
+      <option value="">Later: the transcript check will suggest one</option>
+      ${(project.profiles || []).map(pr => `<option value="${esc(pr.id)}" ${set[l]?.profile?.id === pr.id ? "selected" : ""}>${esc(profileText(pr))}</option>`).join("")}</select>`;
+  return `<div class="wrap"><table><tr><th>Speaker in the file</th><th class="num">Words</th><th>Role</th><th>Profile (never a name)</th></tr>
+    ${labels.map(l => `<tr><td>${esc(l.label)}</td><td class="num muted">${(l.words || 0).toLocaleString()}</td>
+      <td>${roleSel(l.label)}</td><td>${profSel(l.label)}</td></tr>`).join("")}</table></div>`;
+}
+// The first decision, made on the interview's own page.
+function speakersDecision(iv) {
+  return `<section class="card decide" id="decide"><h3>★ Who is who</h3>
+      <p class="muted">Pre-filled from the transcript: the person who talks most is the interviewee. Every agent is given this from the start,
+        so a wrong role would distort the whole analysis.</p>
+      ${speakerTable(iv)}
+      <details><summary>The profile you need is not in the list? Add one</summary>${profileForm()}</details>
+      <div class="row" style="margin-top:12px"><button class="primary" data-act="save-speakers">Confirm and start the check →</button></div>
+      <p class="next-line">Next: an AI agent checks the transcript for misheard words, wrong speaker labels and names to hide (about 2 minutes).</p></section>`;
+}
+const phaseSel = {};  // the phase opened on each interview's page, and the phase the interview was in then
+const nowPhase = (slug) => { const iv = project.interviews.find(x => x.slug === slug); const st = iv && ivStatus(project, iv);
+  return st ? (st.phase || PHASES[PHASES.length - 1]).id : ""; };
+// Pieces shared by the dashboard and its text version.
+function mapTable(p) {
+    const ivs = visibleInterviews(p);
+    const tickable = (iv) => { const x = ivStatus(p, iv).step; return x && x.state === "you" && ["confirm-check", "approve-final"].includes(x.id); };
+    const anyTick = ivs.some(tickable);
+    // A short number under a phase that is done: what it gave.
+    const gave = (id, m) => ({ prepare: m.speakers ? `${m.names ?? 0} name${m.names === 1 ? "" : "s"} to hide` : "",
+      read: m.findings ? `${m.findings} findings` : "", themes: p.codebook.exists ? `${p.codebook.themes} themes` : "",
+      interpret: m.themes ? `${m.central} of ${m.themes} central` : "" }[id] || "");
+    const WORD = { done: "✓ done", running: "● running", you: "★ you", failed: "✕ stopped", todo: "○" };
+    const cell = (iv, ph, st) => {
+      const waits = ph.id === st.phase?.id && ph.state === "todo" && ivWord(p, iv, st) === "Waiting its turn";
+      const g = ph.state === "done" ? gave(ph.id, p.summaries?.[iv.slug] || {}) : "";
+      return `<td class="cell"><button class="chip ${ph.state}" data-ivphase="${esc(iv.slug)}|${ph.id}"
+          title="${esc(`${ph.name}: ${waits ? "waiting its turn" : STATE[ph.state][1]}`)}">${waits ? "◷ waiting" : WORD[ph.state]}</button>${g ? `<span class="cn">${esc(g)}</span>` : ""}</td>`;
+    };
+    const map = ivs.length ? `<div class="wrap"><table class="map"><tr>${anyTick ? "<th>Tick</th>" : ""}<th>Interview</th>
+        ${PHASES.map((ph, i) => `<th class="ph" title="${esc(ph.about)}">${i + 1}. ${ph.name}</th>`).join("")}</tr>
+      ${ivs.map(iv => { const st = ivStatus(p, iv), prof = Object.values(iv.speakers || {}).find(x => x.profile)?.profile;
+        return `<tr>${anyTick ? `<td>${tickable(iv) ? `<input type="checkbox" data-bulk="${esc(iv.slug)}" aria-label="Tick ${esc(iv.label)}">` : ""}</td>` : ""}
+          <td><button class="link" data-iv="${esc(iv.slug)}" style="font-size:15px"><b class="nowrap">${esc(iv.label)}</b></button>
+            <div class="muted small-t">${prof ? esc(prof.role) : esc(iv.original)} · ${(iv.words || 0).toLocaleString()} words</div>
+            ${iv.status === "error" ? `<div class="bad-text">${esc(iv.message)}</div>` : ""}</td>
+          ${iv.status === "error" ? `<td colspan="${PHASES.length}" class="cell"><button class="chip failed" data-iv="${esc(iv.slug)}">✕ file not readable</button></td>`
+            : phasesOf(p, iv).map(ph => cell(iv, ph, st)).join("")}</tr>`; }).join("")}</table></div>
+      ${anyTick ? `<div class="row" style="margin-top:8px"><button class="small" data-act="bulk">Confirm / approve the ticked interviews</button>
+           <span class="muted">Transcript checks are confirmed with the agent's notes and suggested profile; interviews approved as they are.</span></div>` : ""}`
+      : `<div class="guide">
+          <div><span class="node">1</span><b>Drop a transcript</b><span class="muted">Word, PDF, text, video-call export or a recording, below.</span></div>
+          <div><span class="node">2</span><b>Check who speaks</b><span class="muted">Pre-filled for you, in a table. Then Start.</span></div>
+          <div><span class="node">3</span><b>Review</b><span class="muted">The agents read; you confirm and approve.</span></div></div>`;
+    return map;
+}
+function freshCard(p) {
+  return `      ${dupes.length ? `<div class="card attn"><h3>Already in this project</h3>
+          ${dupes.map((d, i) => `<div class="spread item"><span>${esc(d.msg)} Analysing it again would repeat the work and the cost.</span>
+            <span class="row"><button class="small" data-dup-skip="${i}">Skip it</button><button class="small" data-dup-add="${i}">Add it anyway</button></span></div>`).join("")}</div>` : ""}
+      ${(() => { const fresh = p.interviews.filter(iv => !iv.speakers_set && ["ready", "extracting"].includes(iv.status));
+        if (!fresh.length) return "";
+        const known = (iv) => (iv.speaker_labels || []).length ? iv.speaker_labels : [{ label: "(no speaker names)", words: iv.words }];
+        return `<div class="card attn"><h3>${kindTag("you")} ${fresh.length} new interview${fresh.length > 1 ? "s" : ""}: check who speaks, then start</h3>
+          <p class="muted">Pre-filled: the person who talks most is the interviewee; everyone else listens (interviewers). Change a row if it is wrong.
+            The profile can wait: the transcript check suggests one.</p>
+          <div class="wrap"><table><tr><th>Interview</th><th>Who speaks (interviewee)</th><th>Who listens</th><th>Profile</th></tr>
+          ${fresh.map(iv => { if (iv.status === "extracting") return `<tr><td><b>${esc(iv.label)}</b><div class="muted">${esc(iv.original)}</div></td><td colspan="3" class="muted">${spinner} reading the file…</td></tr>`;
+            const labs = known(iv), g = guessSpeakers(p, iv, labs), who = Object.keys(g).find(k => g[k].role === "interviewee");
+            return `<tr><td><b>${esc(iv.label)}</b><div class="muted">${esc(iv.original)}</div></td>
+              <td><select data-setup-who="${esc(iv.slug)}" aria-label="Interviewee of ${esc(iv.label)}">${labs.map(l => `<option ${l.label === who ? "selected" : ""}>${esc(l.label)}</option>`).join("")}</select></td>
+              <td class="muted" data-setup-others="${esc(iv.slug)}">${labs.filter(l => l.label !== who).map(l => esc(l.label)).join(", ") || "—"}</td>
+              <td><select data-setup-prof="${esc(iv.slug)}" aria-label="Profile of ${esc(iv.label)}"><option value="">later (suggested)</option>
+                ${(p.profiles || []).map(pr => `<option value="${esc(pr.id)}" ${g[who]?.profile?.id === pr.id ? "selected" : ""}>${esc(profileText(pr))}</option>`).join("")}</select></td></tr>`; }).join("")}
+          </table></div>
+          <div class="row actions" style="position:static;border:0"><button class="primary" data-act="start-all" ${fresh.some(iv => iv.status === "extracting") ? "disabled" : ""}>Confirm who is who and start${fresh.length > 1 ? ` all ${fresh.length}` : ""}</button></div></div>`; })()}
+`;
+}
+function dropZone(p) {
+  const ivs = visibleInterviews(p);
+  return `        <div class="drop ${ivs.length ? "compact" : ""}" id="drop" style="margin-top:12px"><p>Drop a transcript or recording here, or
+          <label tabindex="0" role="button" data-pick-files="1" style="color:var(--accent);cursor:pointer;text-decoration:underline">choose files
+          <input type="file" id="file" multiple hidden accept=".txt,.md,.vtt,.srt,.docx,.pdf,.mp3,.m4a,.wav,.mp4,.webm,.ogg,.mov,.aac,.flac,.mkv"></label></p>
+          <p class="muted">Word, PDF, text, video-call export, or an audio/video recording. Each file is one interview.</p></div>`;
+}
+function deleteCard(p) {
+  return `      <div class="icard" style="border-color:var(--bad);margin-top:12px">${confirmDelete
+        ? `<h3>Delete “${esc(p.name)}” permanently?</h3>
+           <p>This removes the project from this computer: its ${p.interviews.length} transcript(s), every finding, the theme list
+             and every report. It cannot be undone. Download anything you want to keep first.</p>
+           <div class="row"><button data-act="delete-cancel">Cancel</button>
+             <button data-act="delete-yes" style="background:var(--bad);border-color:var(--bad);color:var(--surface)">Yes, delete it permanently</button></div>`
+        : `<div class="spread"><div><h3>Delete this project</h3><div class="muted">Removes it and all its files from this computer.</div></div>
+           <button data-act="delete-ask" ${p.running ? "disabled title=\"Wait until the running step has finished\"" : ""}>Delete this project</button></div>`}</div>`;
+}
+function flowCard(p) {
+  return `      <section class="card"><h3>Across the project</h3>
+        <p class="muted" style="margin:0">Once interviews are read and approved, three steps bring them together.</p>
+        <div class="flow">${projectSteps(p).map((x, i) => `<div class="${x.state}"><b>${i + 1}. ${esc(x.name)}</b><span class="tag ${STATE[x.state][0]}" style="align-self:flex-start">${STATE[x.state][1]}</span>
+          <span class="muted">${WHO_ICON[x.who]} ${esc(x.line)}</span><button class="small" ${x.go}>Open</button></div>`).join("")}</div></section>`;
+}
+// The theme analysis, compact enough for many interviews: one row per theme, one cell per interview,
+// darker where the theme is more present (and a sign in the cell, so colour is never alone).
+const REL = { primary: ["r3", "●", "central"], secondary: ["r2", "◐", "mentioned"], tangential: ["r1", "·", "touched on"], absent: ["r0", "", "absent"] };
+let themeSel = "";
+function themeGrid(D, cross) {
+  const ivs = D.grid || [];
+  const stale = D.stale ? `<div class="banner"><b>Older re-reads left out:</b> ${D.stale} interview${D.stale > 1 ? "s were" : " was"} re-read against an earlier theme list. ${D.stale > 1 ? "They come" : "It comes"} back here once re-read against the current one.</div>` : "";
+  if (!ivs.length) return stale + '<p class="muted">Appears once the first interview has been re-read against the theme list.</p>';
+  const ths = (D.themes || []).filter(t => ivs.some(iv => iv.themes[t.id]));
+  if (!ths.length) return '<p class="muted">The re-read interviews do not match the themes in the current theme list yet: they show here once re-read against it.</p>';
+  const sel = ths.find(t => t.id === themeSel) || ths[0];
+  const rows = ths.map(t => `<tr class="${t === sel ? "sel" : ""}"><td class="tname"><button class="tpick" data-theme-pick="${esc(t.id)}" aria-pressed="${t === sel}">${esc(t.name)}${t.group ? `<small>${esc(t.group)}</small>` : ""}</button></td>
+      <td class="tn">${t.central + t.mentioned}<span class="muted">/${ivs.length}</span></td>
+      ${ivs.map(iv => { const c = iv.themes[t.id] || { rel: "absent" }, r = REL[c.rel] || REL.absent;
+        return `<td class="tc"><span class="hc ${r[0]}" tabindex="0" data-ct="${esc(`${iv.label} · ${t.name}: ${r[2]}${c.summary ? `. ${c.summary}` : ""}`)}">${r[1]}</span></td>`; }).join("")}</tr>`).join("");
+  const xt = (cross?.by_theme || []).find(x => x.theme_id === sel.id);
+  const present = ivs.filter(iv => ["primary", "secondary", "tangential"].includes(iv.themes[sel.id]?.rel));
+  const absent = ivs.filter(iv => !present.includes(iv));
+  const preview = `<div class="tprev" id="theme-preview" aria-live="polite"><div class="spread"><h3 style="margin:0">${esc(sel.name)}</h3>
+      <span class="muted">${sel.group ? `${esc(sel.group)} · ` : ""}central in ${sel.central}, mentioned in ${sel.mentioned} of ${ivs.length}</span></div>
+    ${xt ? `<dl class="tdl">${[["Shared", xt.shared], ["Differences", xt.differences], ["By profile", xt.by_profile]].filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}
+    ${present.map(iv => { const c = iv.themes[sel.id], r = REL[c.rel];
+      return `<div class="pi"><div><span class="hc ${r[0]}" aria-hidden="true">${r[1]}</span> <b>${esc(iv.label)}</b> <span class="muted">${r[2]}</span></div>
+        ${c.summary ? `<div class="pi-t">${esc(c.summary)}</div>` : ""}${c.quote ? `<blockquote>“${esc(c.quote)}”</blockquote>` : ""}</div>`; }).join("")}
+    ${absent.length ? `<p class="muted" style="margin:8px 0 0">Absent in ${absent.map(iv => esc(iv.label)).join(", ")}.</p>` : ""}</div>`;
+  return `${stale}<div class="legend-row"><span><i class="hc r3 sm">●</i>central</span><span><i class="hc r2 sm">◐</i>mentioned</span><span><i class="hc r1 sm">·</i>touched on</span><span><i class="hc r0 sm"></i>absent</span></div>
+    <div class="tgrid-wrap ${ivs.length > 8 ? "stack" : ""}"><div class="wrap"><table class="tgrid"><tr><th>Theme</th><th class="tn" title="In how many interviews it is central or mentioned">In</th>
+      ${ivs.map((iv, k) => `<th class="tc" title="${esc(iv.label)}">${esc(String(iv.n || k + 1))}</th>`).join("")}</tr>${rows}</table></div>${preview}</div>`;
+}
+function patternRows(d, D, label) {
+  const n = Math.max(1, (d.interviews || []).length || (D.grid || []).length);
+  return [...(d.patterns || [])].sort((a, b) => (b.interviews || []).length - (a.interviews || []).length).map(x => {
+    const k = (x.interviews || []).length, w = Math.round((100 * k) / n);
+    return `<details class="patrow"><summary><span class="pbar"><span style="width:${w}%"></span></span><span class="bval">${k}/${n}</span><span class="ptext">${esc(x.pattern)}</span></summary>
+      <p class="muted" style="margin:4px 0">${(x.interviews || []).map(s => esc(label[s] || s)).join(", ")}</p>
+      ${(x.evidence || []).map(e => `<blockquote>“${esc(e.text)}” <span class="src">${esc(label[e.slug] || e.slug)}</span></blockquote>`).join("")}</details>`; }).join("");
+}
+
+// The results as slides, in the page: the arrow keys move, Esc closes, F for full screen.
+let deckI = 0, deckSlides = [], deckOpener = null;
+window.addEventListener("popstate", () => closeSlides());
+async function openSlides() {
+  const pid = view.pid, p = project;
+  const D = cache.dash ??= await api(`projects/${pid}/dashboard`);
+  const d = p.cross.exists ? (cache.cross ??= await api(`projects/${pid}/file/cross`)) : null;
+  const R = p.reports.length ? (cache.rt ??= await api(`projects/${pid}/file/report-text`).catch(() => ({}))) : null;
+  const n = (D.grid || []).length, ths = (D.themes || []).filter(t => t.central + t.mentioned);
+  const label = Object.fromEntries(p.interviews.map(iv => [iv.slug, iv.label]));
+  const bars = (list, max) => `<div class="sl-bars">${list.map(t => `<div class="sl-bar"><span class="sl-bl">${esc(t.name)}</span>
+      <span class="sl-track">${t.central ? `<span class="bseg" style="width:${Math.round((100 * t.central) / max)}%"></span>` : ""}${t.mentioned ? `<span class="bseg light" style="width:${Math.round((100 * t.mentioned) / max)}%"></span>` : ""}</span>
+      <span class="sl-v">${t.central} · ${t.mentioned}</span></div>`).join("")}</div>`;
+  const S = [];
+  S.push(`<div class="sl-title"><div class="sl-kicker">Interview analysis</div><h1>${esc(p.name)}</h1><p class="sl-q">${esc(p.question)}</p>
+    <p class="sl-meta">${n} interview${n === 1 ? "" : "s"} analysed · ${new Date().toLocaleDateString([], { dateStyle: "long" })}</p></div>`);
+  S.push(`<h2>In numbers</h2><div class="sl-kpis">${[[visibleInterviews(p).length, "interviews"], [D.findings, "findings, every quote checked"], [(D.themes || []).length, "themes"],
+    [(d?.patterns || []).length, "shared patterns"]].map(([v, l]) => `<div><b>${Number(v || 0).toLocaleString()}</b><span>${l}</span></div>`).join("")}</div>`);
+  const take = (R?.takeaways || []).slice(0, 5);
+  if (take.length) S.push(`<h2>Key takeaways</h2><ul class="sl-list">${take.map(x => `<li><span class="cl"><b>${esc(x[0] || "")}</b>${esc((x.slice(1) || []).join(""))}</span></li>`).join("")}</ul>`);
+  else if (d?.overview) S.push(`<h2>Overview</h2><p class="sl-big">${esc(d.overview)}</p>`);
+  if (ths.length) S.push(`<h2>The most recurring themes</h2><p class="sl-sub">In how many of the ${n} interviews each theme is central (dark) or mentioned (light).</p>${bars(ths.slice(0, 8), Math.max(1, n))}`);
+  for (const g of D.groups || []) {
+    const gt = ths.filter(t => t.gid === g.id);
+    if (!gt.length) continue;
+    S.push(`<h2>${esc(g.name)}</h2><div class="sl-themes">${gt.slice(0, 4).map(t => { const xt = (d?.by_theme || []).find(x => x.theme_id === t.id);
+      return `<div><b>${esc(t.name)}</b> <span class="sl-in">in ${t.central + t.mentioned} of ${n}</span>${xt?.shared ? `<p>${esc(xt.shared)}</p>` : ""}</div>`; }).join("")}</div>`);
+  }
+  const pats = [...(d?.patterns || [])].sort((a, b) => (b.interviews || []).length - (a.interviews || []).length).slice(0, 5);
+  if (pats.length) S.push(`<h2>Shared patterns</h2><ul class="sl-list">${pats.map(x => `<li><span class="cl"><b>${esc(x.pattern)}</b> <span class="sl-in">${(x.interviews || []).length} interviews</span></span></li>`).join("")}</ul>`);
+  const div = (d?.divergences || []).slice(0, 4);
+  if (div.length) S.push(`<h2>Where they differ</h2><ul class="sl-list">${div.map(x => `<li><span class="cl"><b>${esc(x.about)}</b>${esc(x.how_they_differ || "")}</span></li>`).join("")}</ul>`);
+  const lim = (R?.limits || []).length ? `<ul class="sl-list">${R.limits.slice(0, 5).map(x => `<li><span class="cl"><b>${esc(x[0] || "")}</b>${esc((x.slice(1) || []).join(""))}</span></li>`).join("")}</ul>`
+    : d?.limits ? `<p class="sl-big">${esc(d.limits)}</p>` : "";
+  if (lim) S.push(`<h2>Limits</h2>${lim}`);
+  deckSlides = S; deckI = 0;
+  let deck = document.getElementById("deck");
+  if (!deck) {
+    deck = Object.assign(document.createElement("div"), { id: "deck" });
+    deck.setAttribute("role", "dialog"); deck.setAttribute("aria-modal", "true"); deck.setAttribute("aria-label", "The results as slides");
+    document.body.append(deck);
+    deck.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.deck === "next") deckGo(1); else if (b.dataset.deck === "prev") deckGo(-1);
+      else if (b.dataset.deck === "full") (document.fullscreenElement ? document.exitFullscreen() : deck.requestFullscreen?.())?.catch?.(() => {});
+      else if (b.dataset.deck === "close") closeSlides(); });
+  }
+  deckOpener = document.activeElement;
+  deck.hidden = false; document.body.classList.add("deck-open");
+  drawSlide(); deck.querySelector("[data-deck=next]")?.focus();
+}
+function drawSlide() {
+  const deck = document.getElementById("deck"), had = document.activeElement?.dataset?.deck;
+  deck.innerHTML = `<div class="deck-top"><span>${esc(project.name)}</span><span class="grow"></span>
+      <button data-deck="full" title="Full screen (F)">⛶ Full screen</button><button data-deck="close" title="Close (Esc)">✕ Close</button></div>
+    <div class="slide" aria-live="polite">${deckSlides[deckI]}</div>
+    <div class="deck-bot"><button data-deck="prev" ${deckI ? "" : "disabled"} aria-label="Previous slide">‹</button>
+      <span class="deck-n">${deckI + 1} / ${deckSlides.length}</span><button data-deck="next" ${deckI < deckSlides.length - 1 ? "" : "disabled"} aria-label="Next slide">›</button></div>`;
+  const b = deck.querySelector(`[data-deck="${had || "next"}"]:not([disabled])`) || deck.querySelector("[data-deck=prev]:not([disabled]), [data-deck=next]:not([disabled])");
+  b?.focus();
+}
+function deckGo(step) { deckI = Math.max(0, Math.min(deckSlides.length - 1, deckI + step)); drawSlide(); }
+function closeSlides() { const deck = document.getElementById("deck"); if (!deck || deck.hidden) return;
+  deck.hidden = true; document.body.classList.remove("deck-open");
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (deckOpener?.isConnected) deckOpener.focus(); deckOpener = null; }
+document.addEventListener("keydown", (e) => {
+  const deck = document.getElementById("deck");
+  if (!deck || deck.hidden) return;
+  const k = e.key;
+  if (["ArrowRight", "PageDown", " "].includes(k)) { e.preventDefault(); e.stopImmediatePropagation(); deckGo(1); }
+  else if (["ArrowLeft", "PageUp"].includes(k)) { e.preventDefault(); e.stopImmediatePropagation(); deckGo(-1); }
+  else if (k === "Escape") { e.preventDefault(); closeSlides(); }
+  else if (k === "f" || k === "F") { e.preventDefault(); (document.fullscreenElement ? document.exitFullscreen() : deck.requestFullscreen?.())?.catch?.(() => {}); }
+}, true);
 const STEP_ORDER = PHASES.flatMap(ph => ph.steps);
-const GONE = '<div class="card"><p>This interview is no longer in the project.</p><button data-nav-go="analysis">Go to Analysis</button></div>';
+const GONE = '<div class="card"><p>This interview is no longer in the project.</p><button data-nav-go="project">Go to the overview</button></div>';
 // Why a step stopped, in words: another interview's file, a misquote, or something else.
 function stopText(s, G) {
   const r = s.reason || {};
@@ -1455,6 +2032,64 @@ function stopText(s, G) {
 
 // ---------------------------------------------------------------- screens
 const screens = {
+  setup() {
+    const c = claude, ok = claudeReady();
+    if (!c) return `<div class="setup"><h2 class="pg">Before you start</h2><p class="lede">${spinner} Checking this computer…</p></div>`;
+    const row = (state, title, sub, extra = "", help = "") => `<div class="check-row"><span class="ic ${state}" aria-hidden="true">${{ ok: "✓", bad: "✕", todo: "" }[state]}</span>
+        <div><b>${title}</b><div class="muted">${sub}</div></div><div>${extra}</div>${help ? `<div class="help">${help}</div>` : ""}</div>`;
+    const again = '<button class="small" data-act="claude-recheck">Check again</button>';
+    const rows = [];
+    if (!c.installed) rows.push(row("bad", "Claude Code is not installed", "The analysis runs through Claude Code, Anthropic's program for this computer.", again,
+      `<div>To install it, open <b>PowerShell</b> (Start menu, type “PowerShell”) and type:</div>
+       <p><code>irm https://claude.ai/install.ps1 | iex</code></p>
+       <p class="muted">Then click “Check again”. It also needs a Claude subscription (Pro, Max, Team or Enterprise).</p>`));
+    else rows.push(row("ok", "Claude Code is installed", `Version ${esc(c.version)}. It runs the analysis on this computer.`));
+    // Who pays for the analysis: your own API key if you saved one, otherwise your Claude subscription.
+    const keyForm = `<div class="help"><label class="field" for="api-key" style="margin-top:0">Your Anthropic API key</label>
+        <div class="row"><input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" style="flex:1 1 260px;width:auto">
+          <button class="small primary" data-act="key-save">Save and test</button>${c.logged_in ? '<button class="small" data-act="key-close">Cancel</button>' : ""}</div>
+        <p class="muted">Create one at <b>console.anthropic.com</b> → API keys. Every step is then paid per use from that account, not from your subscription.
+          The key stays on this computer, in your own user folder: never in the projects, never online, and this page only ever shows its last 4 characters.</p></div>`;
+    if (c.installed && c.key) rows.push(row("ok", "Using your own API key",
+      `Key ending in …${esc(c.key)} · every step is paid per use from your Anthropic account${c.logged_in ? ", not from your subscription" : ""}`,
+      '<button class="small" data-act="key-remove">Remove the key</button>'));
+    else if (c.installed && c.env_key) rows.push(row("ok", "Using an API key set on this computer",
+      `Key ending in …${esc(c.env_key)}, set outside the platform (ANTHROPIC_API_KEY): Claude Code uses it for every step, so they are paid from that key${c.logged_in ? ", not from your subscription" : ""}.`,
+      keyOpen ? "" : '<button class="small" data-act="key-open">Use another key</button>', keyOpen ? keyForm : ""));
+    else if (c.installed && c.unknown) rows.push(row("todo", "Your Claude login could not be confirmed",
+      "Claude Code did not answer in time. Steps still try to run; click “Check again” in a moment.", again));
+    else if (c.installed && c.logged_in) rows.push(row("ok", "You are logged in to Claude",
+      `${c.plan ? `${esc(c.plan)} subscription · ` : ""}the analysis uses this account's usage`,
+      keyOpen ? "" : '<button class="small" data-act="key-open">Use an API key instead</button>', keyOpen ? keyForm : ""));
+    else if (c.installed) rows.push(row("bad", "You are not logged in to Claude",
+      "Log in with the Claude account whose subscription pays for the analysis (Pro, Max, Team or Enterprise), or use your own API key.", again,
+      `<div class="row"><button class="primary small" data-act="claude-login">Log in</button>
+         <span>${loginStarted ? `${spinner} A small window opened, then your browser. Log in there; this page notices by itself.` : "Opens a small window, then your browser. Log in there, then come back to this page."}</span></div>
+       <p class="muted">Nothing opens? In PowerShell, type <code>claude auth login</code>, then click “Check again”.</p>`)
+      + `<div class="check-row" style="border-top:0;padding-top:0"><span></span><div><b>Or: bring your own key</b><div class="muted">Pay per use with an Anthropic API key, without a subscription.</div></div><div></div>${keyForm}</div>`);
+    if (ok) {
+      const t = claudeTest;
+      rows.push(row(t && !t.running ? (t.ok ? "ok" : "bad") : "todo", `Connection test <span class="tag grey">optional</span>`,
+        t && !t.running ? esc(t.message) : "Sends one short question to Claude, to check that it answers and that usage is left.",
+        t && t.running ? `<span class="muted">${spinner} Asking…</span>` : `<button class="small" data-act="claude-test">${t ? "Test again" : "Test now"}</button>`));
+    }
+    // After "Log in", the page looks again every few seconds until the login has gone through.
+    clearTimeout(loginTimer);
+    if (loginStarted && c.installed && !c.ready) loginTimer = setTimeout(async () => { if (view.screen === "setup") { await checkClaude(true); render(); } }, 4000);
+    return `<div class="setup">${errorBox()}<h2 class="pg">Before you start</h2>
+      <p class="lede">${ok ? "The platform checks this computer each time it opens. It takes a second." : c.installed ? "Claude Code is here; it needs your Claude account." : "The platform needs Claude Code on this computer."}</p>
+      <div class="card checks ${ok ? "" : "bad-b"}">${rows.join("")}</div>
+      <div class="card needs"><h3>What the platform needs, and why</h3>
+        <p><span aria-hidden="true">▣</span><span><b>The program runs on this computer.</b> Your projects stay in its <code>projects</code> folder; nothing is put online.</span></p>
+        <p><span aria-hidden="true">✉</span><span><b>Claude does the reading, through your account.</b> The text of each transcript is sent to Anthropic for that.
+          Check that this fits what your interviewees agreed to.</span></p>
+        <p><span aria-hidden="true">◷</span><span>${c.key ? "<b>It is paid from your API key.</b> About 10 to 15 minutes of agent time per interview, billed per use: see the cost on console.anthropic.com."
+          : "<b>It uses your Claude usage.</b> About 10 to 15 minutes of agent time per interview, taken from your subscription's limits."}</span></p></div>
+      <div class="row"><button class="primary" data-act="setup-continue" ${ok ? "" : "disabled"}>Continue →</button>
+        ${ok ? '<span class="muted">Checked again before every step.</span>'
+          : '<button class="link" data-act="setup-continue">Continue without Claude</button><span class="muted">You can open your projects and results; no step can run.</span>'}</div></div>`;
+  },
+
   async home() {
     const lastId = store.get("analysis-last-project", null);
     let cont = "";
@@ -1490,32 +2125,77 @@ const screens = {
   },
 
   new() {
-    const d = store.get(DRAFT_KEY, { name: "", question: "", subs: "", priors: "" });
-    const profs = d.profiles && d.profiles.length ? d.profiles : [{ role: "", org_type: "", sector: "" }];
-    return `${errorBox()}${banner("Give your project a name and a research question. The rest is optional.")}
-      <div class="card"><h2>New project</h2>
-        ${projects.length ? `<label class="field" for="pfrom">Start from</label>
-          <select id="pfrom"><option value="">A blank project</option>${projects.map(x => `<option value="${esc(x.id)}" ${d.from === x.id ? "selected" : ""}>${esc(x.name)}: copy its question, sub-questions, conclusions and profiles</option>`).join("")}</select>` : ""}
-        <label class="field" for="pname">Project name</label>
-        <input type="text" id="pname" value="${esc(d.name)}" placeholder="e.g. Volunteering in food banks">
-        <label class="field" for="pq">Research question</label>
-        <textarea id="pq" placeholder="e.g. What keeps volunteers engaged over time?">${esc(d.question)}</textarea>
-        <details ${d.subs || d.priors ? "open" : ""}><summary>Optional: sub-questions and earlier conclusions to test</summary>
-          <label class="field" for="psubs">Sub-questions, one per line</label>
-          <textarea id="psubs" placeholder="Each finding will be tagged with the sub-question it bears on">${esc(d.subs)}</textarea>
-          <label class="field" for="ppriors">Earlier conclusions to test, one per line</label>
-          <textarea id="ppriors" placeholder="e.g. from your desk research; every interview is checked against them">${esc(d.priors)}</textarea>
-        </details>
-        <h3 style="margin-top:18px">Who you interview</h3>
-        <p class="muted">The profiles of your interviewees: role, type of organisation, sector; never a name. When you add an
-          interview, you pick one of these (or add a new one). The cross-analysis compares interviews by profile.</p>
-        <div class="wrap"><table><tr><th>Role or position</th><th>Type of organisation</th><th>Sector</th></tr>
-          ${profs.map((pr, i) => `<tr>${["role", "org_type", "sector"].map(k => `<td><input type="text" data-np="${i}" data-npk="${k}"
-            value="${esc(pr[k] || "")}" aria-label="${k} of profile ${i + 1}"
-            placeholder="${{ role: "e.g. Head of data", org_type: "e.g. small NGO", sector: "e.g. procurement transparency" }[k]}"></td>`).join("")}</tr>`).join("")}</table></div>
-        <div class="row" style="margin-top:6px"><button class="small" data-act="np-add">+ Another profile</button></div>
-        <p class="muted">The method is built in: the same steps and checks for every project. What you type is kept if the page reloads.</p>
-        <div class="row"><button data-act="home">Cancel</button><button class="primary" data-act="create">Create project</button></div></div>`;
+    const d = draft(), steps = newSteps();
+    const at = steps.includes(d.at) ? d.at : steps[0], i = steps.indexOf(at);
+    const numbered = steps.filter(x => !["from", "review"].includes(x)), num = numbered.indexOf(at) + 1;
+    const pct = Math.round((100 * i) / (steps.length - 1));
+    const err = tfError ? `<div class="tf-err" role="alert">${esc(tfError)}</div>` : "";
+    const ok = (label, key, skip = false) => `<div class="tf-ok"><button class="primary tf-btn" data-tf="next">${label}</button>
+      ${skip ? '<button class="tf-skip" data-tf="next">Skip</button>' : ""}<span class="tf-key">${key}</span></div>`;
+    const q = (title, help, field, { req = false, id = "", key = "press <b>Enter ↵</b>", skip = false, mark = `${num} →` } = {}) =>
+      `<div class="tf-q"><div class="tf-num" aria-hidden="true">${mark}</div><div class="tf-body">
+        <label class="tf-title" ${id ? `for="${id}"` : ""}>${title}${req ? ' <span class="tf-req" title="Needed">*</span>' : ""}</label>
+        ${help ? `<p class="tf-help">${help}</p>` : ""}${field}${err}${ok(skip ? "OK ✓" : "OK ✓", key, skip)}</div></div>`;
+    const lines = (t) => String(t || "").split("\n").map(x => x.trim()).filter(Boolean);
+    const profs = (d.profiles || []).length ? d.profiles : [{ role: "", org_type: "", sector: "" }];
+    const PH = { role: "Role, e.g. Head of data", org_type: "Organisation, e.g. small NGO", sector: "Sector, e.g. procurement transparency" };
+    let body = "";
+    switch (at) {
+      case "from": {
+        const opts = [["", "A blank project"], ...projects.map(x => [x.id, `A copy of “${x.name}”`])].slice(0, 26);
+        body = `<div class="tf-q"><div class="tf-num" aria-hidden="true">→</div><div class="tf-body">
+          <div class="tf-title">Start from a blank project, or from one you already have?</div>
+          <p class="tf-help">A copy takes its research question, sub-questions, conclusions and profiles, not its interviews. Everything stays editable.</p>
+          <div class="tf-choices" role="radiogroup">${opts.map(([id, t], k) => `<button class="tf-choice ${(d.from || "") === id ? "sel" : ""}" role="radio"
+            aria-checked="${(d.from || "") === id}" data-from="${esc(id)}"><span class="tf-letter">${String.fromCharCode(65 + k)}</span><span>${esc(t)}</span>
+            ${(d.from || "") === id ? '<span class="tf-tick" aria-hidden="true">✓</span>' : ""}</button>`).join("")}</div>
+          ${err}${ok("OK ✓", "press a letter, or <b>Enter ↵</b>")}</div></div>`;
+        break;
+      }
+      case "name":
+        body = q("What is your project called?", "Shown in the menu and on the reports.",
+          `<input type="text" id="tf-name" class="tf-input" value="${esc(d.name || "")}" placeholder="Type your answer here…" autocomplete="off">`,
+          { req: true, id: "tf-name" });
+        break;
+      case "question":
+        body = q("What is your research question?", "Every agent reads it first, before anything else. You can change it later.",
+          `<textarea id="tf-question" class="tf-input" rows="2" placeholder="Type your answer here…">${esc(d.question || "")}</textarea>`,
+          { req: true, id: "tf-question", key: "press <b>Enter ↵</b> · <b>Shift + Enter</b> for a new line" });
+        break;
+      case "subs":
+        body = q("Any sub-questions?", "One per line. Each finding is then tagged with the sub-question it bears on. Optional.",
+          `<textarea id="tf-subs" class="tf-input" rows="3" placeholder="Type one sub-question per line…">${esc(d.subs || "")}</textarea>`,
+          { id: "tf-subs", key: "<b>Enter ↵</b> for a new line · <b>Ctrl + Enter</b> to go on", skip: !lines(d.subs).length });
+        break;
+      case "priors":
+        body = q("Earlier conclusions to test?", "One per line, for example from your desk research. Every interview is checked against them: supported, complicated or contradicted. Optional.",
+          `<textarea id="tf-priors" class="tf-input" rows="3" placeholder="Type one conclusion per line…">${esc(d.priors || "")}</textarea>`,
+          { id: "tf-priors", key: "<b>Enter ↵</b> for a new line · <b>Ctrl + Enter</b> to go on", skip: !lines(d.priors).length });
+        break;
+      case "profiles":
+        body = q("Who do you interview?", "A profile per kind of interviewee: a role (needed), then type of organisation and sector. Never a name. Optional: the transcript check suggests one for each interviewee.",
+          `<div class="tf-profs">${profs.map((pr, n) => `<div class="tf-prof"><span class="tf-letter">P${n + 1}</span>${["role", "org_type", "sector"].map(k =>
+            `<input type="text" class="tf-input sm" data-np="${n}" data-npk="${k}" value="${esc(pr[k] || "")}" placeholder="${PH[k]}" aria-label="${PH[k].split(",")[0]} of profile ${n + 1}" autocomplete="off">`).join("")}</div>`).join("")}</div>
+           <button class="tf-skip" data-act="np-add">+ Another profile</button>`,
+          { key: "press <b>Enter ↵</b>", skip: !profs.some(pr => pr.role || pr.org_type || pr.sector) });
+        break;
+      default: {  // review
+        const prof = (d.profiles || []).filter(pr => (pr.role || "").trim()).map(profileText);
+        const rows = [["name", "Project name", d.name], ["question", "Research question", d.question], ["subs", "Sub-questions", lines(d.subs).join("\n")],
+          ["priors", "Earlier conclusions to test", lines(d.priors).join("\n")], ["profiles", "Who you interview", prof.join("\n")]];
+        body = `<div class="tf-q"><div class="tf-num" aria-hidden="true">✓</div><div class="tf-body">
+          <div class="tf-title">Ready to create your project?</div>
+          <p class="tf-help">Check your answers; click one to change it.${d.from ? ` Copied from “${esc(projects.find(x => x.id === d.from)?.name || d.from)}”.` : ""}</p>
+          <div class="tf-review">${rows.map(([k, t, v]) => `<button class="tf-rrow" data-tfgo="${k}"><span class="k">${t}</span>
+            <span class="v">${v ? esc(v) : '<span class="muted">none</span>'}</span><span class="tf-edit" aria-hidden="true">✎</span></button>`).join("")}</div>
+          ${err}<div class="tf-ok"><button class="primary tf-btn" data-act="create">Create the project</button><span class="tf-key">press <b>Enter ↵</b></span></div>
+          <p class="tf-help" style="font-size:14px;margin-top:18px">The method is built in: the same steps and checks for every project.</p></div></div>`;
+      }
+    }
+    return `<div class="tf"><div class="tf-bar" role="progressbar" aria-label="Progress" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>
+      <div class="tf-top"><span class="tf-crumb">New project${num ? ` · question ${num} of ${numbered.length}` : ""}</span><button class="tf-skip" data-act="tf-cancel" title="Leave and discard these answers">✕ Cancel</button></div>
+      <div class="tf-stage ${tfDir > 0 ? "up" : "down"}">${errorBox()}${body}</div>
+      <div class="tf-nav"><button data-tf="prev" ${i === 0 ? "disabled" : ""} aria-label="Previous question" title="Previous question">‹</button><button data-tf="next" ${at === "review" ? "disabled" : ""} aria-label="Next question" title="Next question">›</button></div></div>`;
   },
 
   async search() {
@@ -1535,14 +2215,14 @@ const screens = {
     if (!q.length) {
       return `<div class="card"><h2>Review</h2><p>${project.running ? `${spinner} Nothing waits for you right now. Running now: ${esc(runLabel(project).text)}${runningFor(project)}.
         You will be told when it is your turn.` : "Nothing waits for you. Add an interview, or open the results."}</p>
-        <div class="row"><button data-nav-go="project">Inputs</button><button data-nav-go="results">Results</button></div></div>`;
+        <div class="row"><button data-nav-go="project">Overview</button><button data-nav-go="results">Results</button></div></div>`;
     }
     const cur = q.find(x => x.key === view.step) || q[0];
     view.slug = cur.slug; view.step = cur.key; store.set(VIEW_KEY, view);
     const bad = cur.error && project.interviews.find(x => x.slug === cur.slug);
     const body = bad ? `<article class="stepcard failed"><header><span class="dot failed">${ICON.failed}</span><h3>${esc(bad.label)}: the file could not be read</h3>
           <span class="tag bad">${STATE.failed[1]}</span></header><p class="bad-text">${esc(bad.message)}</p>
-        <dl><dt>What you do</dt><dd class="do failed">Remove it, then add the file again (or another version of it) under Inputs.</dd></dl>
+        <dl><dt>What you do</dt><dd class="do failed">Remove it, then add the file again (or another version of it) on the Overview.</dd></dl>
         <div class="row actions"><button class="primary" data-remove="${esc(bad.slug)}">Remove it</button></div></article>`
       : cur.key === "themes" ? await screens.codebook()
       : cur.step.state === "failed" ? screens.step.call(null, cur.step.id)
@@ -1563,36 +2243,56 @@ const screens = {
     if (iv.slug !== view.slug) { view.slug = iv.slug; store.set(VIEW_KEY, view); }
     const st = ivStatus(p, iv), phs = phasesOf(p, iv);
     const prof = Object.values(iv.speakers || {}).find(x => x.profile)?.profile;
+    const nowPh = (st.phase || phs[phs.length - 1]).id;
+    // The phase you clicked stays open until the interview moves on to another phase; then the new one opens.
+    const pick = phaseSel[`${p.id}/${iv.slug}`];
+    const selId = pick && pick.at === nowPh ? pick.id : nowPh, sel = phs.find(x => x.id === selId);
+    const mine = (ph) => ph.steps.filter(x => x.who === "you");
+    const pdec = (ph) => { const d = mine(ph); if (!d.length) return "";
+      return `<span class="pdec">★ ${{ themes: "theme list", approve: "approve" }[ph.id] || `${d.length} decision${d.length > 1 ? "s" : ""}`}</span>`; };
+    const bar = `<ol class="path phasebar" aria-label="The five phases of this interview">${phs.map((ph, i) => `<li class="${ph.state} ${ph.id === selId ? "sel" : ""} ${i && phs[i - 1].state === "done" ? "after-done" : ""}">
+        <button data-phase="${ph.id}" aria-pressed="${ph.id === selId}" title="${esc(ph.about)}"><span class="node">${{ done: "✓", failed: "✕", you: "★" }[ph.state] || i + 1}</span><b>${ph.name}</b>${pdec(ph)}</button></li>`).join("")}</ol>`;
+    const m = p.summaries?.[iv.slug] || {};
+    const done = (id) => ((p.steps[iv.slug] || []).find(x => x.id === id) || {}).state === "done";
+    const links = [done("check") && `<button class="small" data-go="check" data-slug="${esc(iv.slug)}">Transcript notes</button>`,
+      done("readers") && `<button class="small" data-go="codes" data-slug="${esc(iv.slug)}">Findings${m.findings ? ` (${m.findings})` : ""}</button>`,
+      done("latent") && `<button class="small" data-go="final" data-slug="${esc(iv.slug)}">Re-read and behind the lines</button>`].filter(Boolean);
+    const head = `<section class="card"><div class="spread"><h2 class="pg" style="margin:0">${esc(iv.label)}</h2>
+        <span class="muted">${esc(iv.original)}${iv.words ? ` · ${iv.words.toLocaleString()} words` : ""}</span></div>
+      <div class="muted">Interviewee: ${prof ? esc(profileText(prof)) : "not given yet"}</div>
+      ${links.length ? `<div class="row quick" style="margin-top:8px"><span class="muted">What the AI produced:</span>${links.join("")}</div>` : ""}
+      ${bar}</section>`;
+    // Each step in one line: done, running, yours or still to come, and who does it. Open it to see what it does.
+    const WHO_WORD = { program: "program", agent: "agent", you: "you" };
+    const isNow = (x) => st.state !== "done" && st.step && x.id === st.step.id;
+    const row = (x) => {
+      const G = STEP_GUIDE[x.id] || { title: x.title };
+      const out = x.state === "done" && G.out ? (G.out[0] === "quotes" ? `<button class="small" data-sec="quotes" data-slug="${esc(iv.slug)}">${G.out[1]}</button>`
+        : `<button class="small" data-go="${G.out[0]}" data-slug="${esc(iv.slug)}">${G.out[1]}</button>`) : "";
+      const icon = `<span class="sic ${x.state}" aria-hidden="true">${{ done: "✓", running: "●", failed: "✕", you: "★", todo: "" }[x.state]}</span>`;
+      const label = `<span>${x.who === "you" && !isNow(x) ? "★ " : ""}${isNow(x) ? `<b>${esc(G.title)}</b>` : esc(G.title)}
+        <span class="st-who">· ${WHO_ICON[x.who]} ${WHO_WORD[x.who]}${isNow(x) ? " · now" : ""}</span></span>`;
+      // The step of the moment is shown in full below, so its line here does not open.
+      if (isNow(x)) return `<div class="srow now ${x.state}" id="sd-${x.id}">${icon}${label}<span class="tag ${STATE[x.state][0]}">${STATE_TXT[x.state]}</span></div>`;
+      return `<details class="srow ${x.state}" id="sd-${x.id}"><summary>${icon}${label}${out || '<span class="st-who" aria-hidden="true">▾</span>'}</summary>${stepCard(iv, x)}</details>`;
+    };
+    const n = mine(sel).length;
+    const phaseCard = `<section class="card phasecard" id="phase-${sel.id}"><div class="ph-h"><h3>${sel.name}</h3><span class="tag ${STATE[sel.state][0]}">${STATE[sel.state][1]}</span><span class="grow"></span>
+        <span class="muted">${n === 0 ? "No decision of yours: the program and the agents do it" : n === 1 ? "One of your decisions is in this phase" : `${n} of your decisions are in this phase`}</span></div>
+      <p class="muted" style="margin:4px 0 8px">${esc(sel.about)}</p>
+      ${sel.state !== "todo" && phaseSummary(sel.id, m) ? `<div class="phase-sum" style="margin-bottom:8px">${esc(phaseSummary(sel.id, m))}</div>` : ""}
+      ${sel.steps.map(row).join("")}
+      <p class="muted legend" style="margin:10px 0 0">${WHO_ICON.program} program, fixed rules · ${WHO_ICON.agent} AI agent · ${WHO_ICON.you} your decision. Open a step to see what it does, why, and what it produces.</p></section>`;
     const now = st.state === "done" ? `<article class="stepcard done"><header><span class="dot done">✓</span><h3>This interview is analysed and approved</h3></header>
         <p>It is part of the cross-analysis and of the findings report.</p>
         <div class="row"><button class="primary" data-nav-go="results">Open the results</button><button data-dl="interview" data-slug="${esc(iv.slug)}">Its report (Word)</button></div></article>`
       : iv.status === "error" ? `<div class="error"><b>The file could not be read.</b> ${esc(iv.message)}</div>`
+      : sel.id !== st.phase.id ? `<p class="muted">Now: <b>${esc((STEP_GUIDE[st.step.id] || st.step).title)}</b>, in the ${esc(st.phase.name)} phase.
+          <button class="link" data-phase="${st.phase.id}">Show it</button></p>`
+      : st.step.id === "speakers" && st.step.state === "you" ? speakersDecision(iv)
       : stepCard(iv, st.step);
-    const path = `<ol class="path" aria-label="Phases of this interview">${phs.map((ph, i) => `<li class="${ph.state} ${ph === st.phase ? "cur" : ""} ${i && phs[i - 1].state === "done" ? "after-done" : ""}">
-        <button data-phase="${ph.id}" title="${esc(ph.about)}"><span class="node">${ph.state === "done" ? "✓" : ph.state === "failed" ? "✕" : i + 1}</span>${ph.name}</button></li>`).join("")}</ol>`;
-    return `${errorBox()}<div class="spread"><div><h2 class="pg">${esc(iv.label)}</h2>
-          <div class="muted">${esc(iv.original)}${iv.words ? ` · ${iv.words.toLocaleString()} words` : ""}
-          ${iv.file ? ` · <button class="link" data-go="transcript" data-slug="${esc(iv.slug)}">view text</button>` : ""}
-          · Interviewee: ${prof ? esc(profileText(prof)) : "not given yet"}</div></div>
-          ${!p.running || !p.running.startsWith(iv.slug + ":") ? `<button class="link danger" data-remove="${esc(iv.slug)}">Remove this interview</button>` : ""}</div>
-      ${(() => { const done = (id) => ((p.steps[iv.slug] || []).find(x => x.id === id) || {}).state === "done";
-        const m = p.summaries?.[iv.slug] || {};
-        const links = [done("check") && `<button class="small" data-go="check" data-slug="${esc(iv.slug)}">Transcript notes</button>`,
-          done("readers") && `<button class="small" data-go="codes" data-slug="${esc(iv.slug)}">Findings${m.findings ? ` (${m.findings})` : ""}</button>`,
-          done("latent") && `<button class="small" data-go="final" data-slug="${esc(iv.slug)}">Re-read and behind the lines</button>`].filter(Boolean);
-        return links.length ? `<div class="row quick"><span class="muted">What the AI produced:</span>${links.join("")}</div>` : ""; })()}
-      ${path}
-      <h3 class="sec">${st.state === "done" ? "Done" : "Now"}</h3>${now}
-      <h3 class="sec">Every step</h3>
-      <p class="muted legend">${WHO_ICON.program} program, fixed rules · ${WHO_ICON.agent} AI agent · ${WHO_ICON.you} your decision. Open a phase, then a step, to see what it does.</p>
-      ${phs.map((ph, i) => `<details class="phase-sec" id="phase-${ph.id}" ${ph === st.phase ? "open" : ""}><summary class="phase-h"><span class="pn">${i + 1}</span><b>${ph.name}</b>
-          <span class="muted">${ph.steps.length} step${ph.steps.length > 1 ? "s" : ""}</span><span class="grow"></span>
-          <span class="tag ${STATE[ph.state][0]}">${STATE[ph.state][1]}</span></summary>
-        <p class="muted" style="margin:6px 0">${esc(ph.about)}</p>
-        ${ph.state !== "todo" && phaseSummary(ph.id, project.summaries?.[iv.slug] || {}) ? `<div class="phase-sum">${esc(phaseSummary(ph.id, project.summaries[iv.slug]))}</div>` : ""}
-        ${ph.steps.map(x => `<details class="sd ${x.state}" id="sd-${x.id}"><summary><span class="dot ${x.state}" aria-hidden="true">${ICON[x.state]}</span>
-            <span class="sd-t">${esc((STEP_GUIDE[x.id] || {}).title || x.title)}</span><span class="who" title="${esc(WHO_KIND[x.who])}">${WHO_ICON[x.who]}</span>
-            ${["you", "running", "failed"].includes(x.state) ? `<span class="tag ${STATE[x.state][0]}">${STATE_TXT[x.state]}</span>` : ""}</summary>${stepCard(iv, x)}</details>`).join("")}</details>`).join("")}`;
+    return `${errorBox()}${head}${iv.status === "error" ? "" : phaseCard}${now}
+      ${!p.running || !p.running.startsWith(iv.slug + ":") ? `<p style="margin-top:18px"><button class="link danger" data-remove="${esc(iv.slug)}">Remove this interview</button></p>` : ""}`;
   },
 
   step(stepId) {
@@ -1606,27 +2306,7 @@ const screens = {
       <div class="spread">${nav(i - 1, "← Previous step")}${nav(i + 1, "Next step →")}</div>`;
   },
 
-  analysis() {
-    const p = project, cb = p.codebook, ivs = visibleInterviews(p);
-    const tickable = (iv) => { const x = ivStatus(p, iv).step; return x && x.state === "you" && ["confirm-check", "approve-final"].includes(x.id); };
-    const anyTick = ivs.some(tickable);
-    return `${errorBox()}<h2 class="pg">Analysis</h2>
-      <p class="lede">What the AI produced. Open an interview or the theme list to read it, reword it (✎), regenerate or refine it.</p>
-      <div class="card"><div class="spread"><div><h3 style="margin:0">Theme list ${cb.exists ? `<span class="tag ${cb.approved ? "ok" : "warn"}">${cb.approved ? "Approved" : STATE.you[1]}</span>` : ""}</h3>
-          <div class="muted">${cb.exists ? `${cb.themes} themes from ${cb.includes.length} interview(s)${cb.frozen ? " · frozen" : ""}` : "Built once the first interview has been read."}</div></div>
-          ${cb.exists ? `<button class="${cb.approved ? "" : "primary"}" data-go="codebook">${cb.approved ? "Open" : "Check and approve"}</button>` : ""}</div></div>
-      <div class="card"><h3>Interviews</h3>
-        ${ivs.length ? `<div class="wrap"><table><tr>${anyTick ? "<th>Tick</th>" : ""}<th>Interview</th><th class="num">Findings</th><th class="num">Central themes</th>
-            <th class="num">Readings behind the lines</th><th>Status</th><th></th></tr>
-          ${ivs.map(iv => { const st = ivStatus(p, iv), m = p.summaries?.[iv.slug] || {};
-            return `<tr>${anyTick ? `<td>${tickable(iv) ? `<input type="checkbox" data-bulk="${esc(iv.slug)}" aria-label="Tick ${esc(iv.label)}">` : ""}</td>` : ""}
-              <td><b class="nowrap">${esc(iv.label)}</b></td><td class="num">${m.findings ?? "—"}</td>
-              <td class="num">${m.themes ? `${m.central} of ${m.themes}` : "—"}</td><td class="num">${m.readings ?? "—"}</td>
-              <td><span class="tag ${STATE[st.state][0]}">${ivWord(p, iv, st)}</span></td><td><button class="small" data-iv="${esc(iv.slug)}">Open</button></td></tr>`; }).join("")}</table></div>
-          ${anyTick ? `<div class="row" style="margin-top:8px"><button class="small" data-act="bulk">Confirm / approve the ticked interviews</button>
-               <span class="muted">Transcript checks are confirmed with the agent's notes and suggested profile; interviews approved as they are.</span></div>` : ""}`
-          : '<p class="muted">No interview yet: add them under Inputs.</p>'}</div>`;
-  },
+  analysis() { return screens.project(); },  // the old Analysis page: its table is now the overview
 
   async tech() {
     const p = project;
@@ -1713,26 +2393,12 @@ const screens = {
   speakers() {
     const iv = project.interviews.find(x => x.slug === view.slug);
     if (!iv) return GONE;
-    const labels = (iv.speaker_labels || []).length ? iv.speaker_labels : [{ label: "(no speaker names)", words: iv.words }];
-    const profs = project.profiles || [];
-    // Not yet answered: pre-filled by the platform, for the researcher to check and confirm.
-    const guessed = !iv.speakers_set;
-    const set = guessed ? guessSpeakers(project, iv, labels) : (iv.speakers || {});
-    const roleSel = (l) => `<select data-sp-role="${esc(l)}" aria-label="Role of ${esc(l)}">
-        <option value="">Choose…</option>
-        ${[["interviewer", "Listens: interviewer"], ["interviewee", "Speaks: interviewee"], ["other", "Someone else"]]
-          .map(([v, t]) => `<option value="${v}" ${set[l]?.role === v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
-    const profSel = (l) => `<select data-sp-prof="${esc(l)}" aria-label="Profile of ${esc(l)}">
-        <option value="">Later: the transcript check will suggest one</option>
-        ${profs.map(pr => `<option value="${esc(pr.id)}" ${set[l]?.profile?.id === pr.id ? "selected" : ""}>${esc(profileText(pr))}</option>`).join("")}</select>`;
     return `${errorBox()}${iv.speakers_set ? banner("Done. You can change it: the transcript check is then done again.", "Status")
         : banner(`Pre-filled for you: the speaker who talks most is the interviewee, the others interviewers (and interviewers known from your other interviews).
           A wrong role would distort the whole analysis. The profile can wait: the transcript check suggests one.`)}
       <div class="card"><h2>${esc(iv.label)}: who is who</h2>
         <p class="muted">Given to every agent from the start, so they do not have to guess. Speaker labels as found in the transcript.</p>
-        <div class="wrap"><table><tr><th>Speaker label</th><th>Words</th><th>Role</th><th>Profile (if interviewee)</th></tr>
-          ${labels.map(l => `<tr><td>${esc(l.label)}</td><td class="muted">${(l.words || 0).toLocaleString()}</td>
-            <td>${roleSel(l.label)}</td><td>${profSel(l.label)}</td></tr>`).join("")}</table></div>
+        ${speakerTable(iv)}
         <p class="muted">The profile you need is not in the list? Create it below; it is added to the project's profiles.</p>
         ${profileForm()}
       </div>
@@ -1742,7 +2408,7 @@ const screens = {
 
   async cross() { return screens.results(); },
 
-  project() {
+  context() {
     const p = project, ivs = visibleInterviews(p);
     const words = ivs.reduce((n, iv) => n + (iv.words || 0), 0);
     const counts = Object.fromEntries(["done", "running", "you", "failed", "todo"].map(k => [k, ivs.filter(iv => ivStatus(p, iv).state === k).length]));
@@ -1757,44 +2423,9 @@ const screens = {
           <span class="muted">${usedBy(pr.id).length ? ` · ${esc(usedBy(pr.id).join(", "))}` : " · not used yet"}</span></span>
           <button class="pen" data-edit="prof-${pr.id}" aria-label="Edit this profile" title="Edit">✎</button></div>`).join("");
     const lines = (xs, none, cls = "") => xs.length ? `<ol class="plain ${cls}">${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : `<p class="muted">${none}</p>`;
-    return `${errorBox()}<h2 class="pg">Inputs</h2>
-      <p class="lede">What you give the platform: the transcripts (each checked by you), and the context every agent is given, set by you.</p>
-      ${dupes.length ? `<div class="card attn"><h3>Already in this project</h3>
-          ${dupes.map((d, i) => `<div class="spread item"><span>${esc(d.msg)} Analysing it again would repeat the work and the cost.</span>
-            <span class="row"><button class="small" data-dup-skip="${i}">Skip it</button><button class="small" data-dup-add="${i}">Add it anyway</button></span></div>`).join("")}</div>` : ""}
-      ${(() => { const fresh = p.interviews.filter(iv => !iv.speakers_set && ["ready", "extracting"].includes(iv.status));
-        if (!fresh.length) return "";
-        const known = (iv) => (iv.speaker_labels || []).length ? iv.speaker_labels : [{ label: "(no speaker names)", words: iv.words }];
-        return `<div class="card attn"><h3>${kindTag("you")} ${fresh.length} new interview${fresh.length > 1 ? "s" : ""}: check who speaks, then start</h3>
-          <p class="muted">Pre-filled: the person who talks most is the interviewee; everyone else listens (interviewers). Change a row if it is wrong.
-            The profile can wait: the transcript check suggests one.</p>
-          <div class="wrap"><table><tr><th>Interview</th><th>Who speaks (interviewee)</th><th>Who listens</th><th>Profile</th></tr>
-          ${fresh.map(iv => { if (iv.status === "extracting") return `<tr><td><b>${esc(iv.label)}</b><div class="muted">${esc(iv.original)}</div></td><td colspan="3" class="muted">${spinner} reading the file…</td></tr>`;
-            const labs = known(iv), g = guessSpeakers(p, iv, labs), who = Object.keys(g).find(k => g[k].role === "interviewee");
-            return `<tr><td><b>${esc(iv.label)}</b><div class="muted">${esc(iv.original)}</div></td>
-              <td><select data-setup-who="${esc(iv.slug)}" aria-label="Interviewee of ${esc(iv.label)}">${labs.map(l => `<option ${l.label === who ? "selected" : ""}>${esc(l.label)}</option>`).join("")}</select></td>
-              <td class="muted" data-setup-others="${esc(iv.slug)}">${labs.filter(l => l.label !== who).map(l => esc(l.label)).join(", ") || "—"}</td>
-              <td><select data-setup-prof="${esc(iv.slug)}" aria-label="Profile of ${esc(iv.label)}"><option value="">later (suggested)</option>
-                ${(p.profiles || []).map(pr => `<option value="${esc(pr.id)}" ${g[who]?.profile?.id === pr.id ? "selected" : ""}>${esc(profileText(pr))}</option>`).join("")}</select></td></tr>`; }).join("")}
-          </table></div>
-          <div class="row actions" style="position:static;border:0"><button class="primary" data-act="start-all" ${fresh.some(iv => iv.status === "extracting") ? "disabled" : ""}>Confirm who is who and start${fresh.length > 1 ? ` all ${fresh.length}` : ""}</button></div></div>`; })()}
-      <section class="card" id="sec-interviews"><div class="spread"><h3 style="margin:0">Interviews <span class="count">${ivs.length}</span></h3>
-          <span class="muted">${words.toLocaleString()} words · ${counts.done} analysed · ${counts.you} need you · ${counts.running} running${counts.failed ? ` · ${counts.failed} stopped` : ""}</span></div>
-        ${ivs.length ? `<div class="wrap"><table><tr><th>Interview</th><th class="num">Words</th><th>Interviewee</th><th>Progress ${tip("One bar per phase: Prepare, Read, Themes, Interpret, Approve. Green: done. Blue: in progress. Orange: needs your input. Red: stopped. Grey: not started.")}</th><th>Status</th><th></th></tr>
-          ${ivs.map(iv => { const st = ivStatus(p, iv), prof = Object.values(iv.speakers || {}).find(x => x.profile)?.profile;
-            return `<tr><td><b class="nowrap">${esc(iv.label)}</b><div class="muted small-t">${esc(iv.original)}</div>${iv.status === "error" ? `<div class="bad-text">${esc(iv.message)}</div>` : ""}</td><td class="num">${(iv.words || 0).toLocaleString()}</td>
-              <td>${prof ? esc(prof.role) : "—"}</td><td>${segs(p, iv)}<div class="muted">${st.phase ? esc(st.phase.name) : "all done"}</div></td>
-              <td>${st.state === "you" && OPEN[st.step?.id] ? `<button class="tag warn tagbtn" data-go="${OPEN[st.step.id][0]}" data-slug="${esc(iv.slug)}" title="${esc(OPEN[st.step.id][1])}">${IV_STATE.you} ›</button>`
-                : `<span class="tag ${STATE[st.state][0]}">${ivWord(p, iv, st)}</span>`}</td><td><button class="small" data-iv="${esc(iv.slug)}">Open</button></td></tr>`; }).join("")}</table></div>`
-          : `<div class="guide">
-          <div><span class="node">1</span><b>Drop a transcript</b><span class="muted">Word, PDF, text, video-call export or a recording, below.</span></div>
-          <div><span class="node">2</span><b>Check who speaks</b><span class="muted">Pre-filled for you, in a table. Then Start.</span></div>
-          <div><span class="node">3</span><b>Review</b><span class="muted">The agents read; you confirm and approve.</span></div></div>`}
-        <div class="drop ${ivs.length ? "compact" : ""}" id="drop" style="margin-top:12px"><p>Drop a transcript or recording here, or
-          <label tabindex="0" role="button" data-pick-files="1" style="color:var(--accent);cursor:pointer;text-decoration:underline">choose files
-          <input type="file" id="file" multiple hidden accept=".txt,.md,.vtt,.srt,.docx,.pdf,.mp3,.m4a,.wav,.mp4,.webm,.ogg,.mov,.aac,.flac,.mkv"></label></p>
-          <p class="muted">Word, PDF, text, video-call export, or an audio/video recording. Each file is one interview.</p></div></section>
-      <div class="spread"><h3 class="sec">What every agent is given</h3>
+    return `${errorBox()}<h2 class="pg">Question and profiles</h2>
+      <p class="lede">What every agent is given, set by you: the research question, the sub-questions, earlier conclusions to test, and who you interview (never a name).</p>
+      <div class="spread"><span></span>
         ${crossOld ? `<span class="row"><span class="tag warn">The cross-analysis was made before your last change</span><button class="small" data-act="cross-run">Run it again</button></span>` : ""}</div>
       <div class="cards2">
         ${icard({ id: "question", title: "Research question", src: "you",
@@ -1816,20 +2447,134 @@ const screens = {
             + (editing.has("prof-new") ? `<div class="item">${profileForm()}<div class="row"><button class="small" data-cancel="prof-new">Cancel</button></div></div>`
               : `<div class="row" style="margin-top:8px"><button class="small" data-edit="prof-new">+ Add a profile</button></div>`) })}
       </div>
+`;
+  },
+
+  async project() {
+    const p = project, ivs = visibleInterviews(p);
+    let d = null, dErr = "";
+    try { d = cache.dash ??= await api(`projects/${view.pid}/dashboard`); } catch (e) { dErr = e.message; }
+    const counts = Object.fromEntries(["done", "running", "you", "failed", "todo"].map(k => [k, ivs.filter(iv => ivStatus(p, iv).state === k).length]));
+    const words = ivs.reduce((n, iv) => n + (iv.words || 0), 0), waiting = queue(p).length;
+    const read = ivs.filter(iv => (p.summaries?.[iv.slug] || {}).findings).length;
+    const interpreted = ivs.filter(iv => (p.summaries?.[iv.slug] || {}).themes).length;
+    const nf = (n) => Number(n || 0).toLocaleString();
+    const kpi = (l, v, sub, go = "") => `<div class="kpi" ${go}><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
+    const kpis = `<div class="kpis">
+      ${kpi("Interviews", nf(ivs.length), `${counts.done} analysed${counts.you ? ` · ${counts.you} need you` : ""}${counts.running ? ` · ${counts.running} running` : ""}`)}
+      ${kpi("Words", words >= 10000 ? `${(words / 1000).toFixed(0)}K` : nf(words), "in the transcripts")}
+      ${kpi("Profiles", nf((d?.profiles || []).length), `${(d?.profiles || []).filter(x => x.interviews).length} interviewed`)}
+      ${kpi("Findings", nf(d?.findings), read ? `from ${read} interview${read > 1 ? "s" : ""}, every quote checked` : "after the first reading")}
+      ${kpi("Themes", nf(p.codebook.themes), p.codebook.approved ? "approved by you" : p.codebook.exists ? "wait for your approval" : "not built yet")}
+      ${kpi("Your decisions", nf(waiting), waiting ? "waiting in Review" : "nothing waits for you")}</div>`;
+    // One bar per row, its length the value; the row is the hover target and says it in words.
+    const max = (xs) => Math.max(1, ...xs);
+    const bar = (segs, top, tip, label, side, flag = "") => {
+      const total = segs.reduce((n, x) => n + x.n, 0), w = Math.round((68 * total) / top);
+      return `<div class="brow" tabindex="0" data-ct="${esc(tip)}"><div class="bl">${label}</div><div class="btrack">${total
+        ? `<span class="bbar" style="width:${w}%">${segs.filter(x => x.n).map(x => `<span class="bseg ${x.cls || ""}" style="flex:${x.n}"></span>`).join("")}</span>`
+        : '<span class="bzero"></span>'}<span class="bval">${side}</span>${flag}</div></div>`;
+    };
+    const table = (head, rows) => `<details class="astable"><summary>As a table</summary><div class="wrap"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>
+      ${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i ? "num" : ""}">${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div></details>`;
+    const flag = (t) => `<span class="flag">⚠ ${t}</span>`;
+    const none = (t) => `<p class="muted" style="margin:6px 0">${t}</p>`;
+    // What the interviews cover: findings per question.
+    // With sub-questions, the findings outside them gather in one more row (not a question with little evidence).
+    const hasSubs = (d?.sub_questions || []).length > 1;
+    const sqs = (d?.sub_questions || []).map(x => x.id === "RQ" && hasSubs ? { ...x, id: "Other", label: "Outside the sub-questions", text: "Important, but outside the sub-questions", other: true } : x)
+      .filter(x => !x.other || x.findings).sort((a, b) => (a.other ? 1 : 0) - (b.other ? 1 : 0));
+    const topQ = max(sqs.map(x => x.findings));
+    const covers = `<section class="card"><div class="chart-h"><h3>What each question has gathered</h3><span class="muted">findings</span></div>
+      <p class="chart-sub">Findings per question, across every interview. A short bar is a question the interviews barely answer.</p>
+      ${read ? sqs.map(x => bar([{ n: x.findings }], topQ, `${x.label}: ${x.findings} findings from ${x.interviews} interview(s). ${x.text}`,
+          `<b>${esc(x.id)}</b> <small>${esc(x.text)}</small>`, `${x.findings} · ${x.interviews} int.`, x.findings < 3 && !x.other ? flag("little evidence") : "")).join("")
+        + table(["Question", "Findings", "Interviews"], sqs.map(x => [`${x.id}. ${x.text}`, x.findings, x.interviews]))
+        : none(hasSubs ? `${d.sub_questions.length - 1} sub-question${d.sub_questions.length > 2 ? "s" : ""}: filled once the first interview has been read.` : "Filled once the first interview has been read.")}</section>`;
+    // Who was interviewed: interviews per profile.
+    const profs = d?.profiles || [], noProf = ivs.filter(iv => !Object.values(iv.speakers || {}).some(sp => sp.role === "interviewee" && sp.profile)).length;
+    const topP = max([...profs.map(x => x.interviews), noProf]);
+    const who = `<section class="card"><div class="chart-h"><h3>Who you interviewed</h3><span class="muted">interviews</span></div>
+      <p class="chart-sub">Interviews per profile. A profile with no bar is a kind of interviewee you have not reached yet.</p>
+      ${profs.length || noProf ? profs.map(x => bar([{ n: x.interviews }], topP, `${x.text}: ${x.interviews} interview(s)`,
+          `<b>${esc(x.id)}</b> <small>${esc(x.text)}</small>`, `${x.interviews}`, x.interviews ? "" : flag("not interviewed yet"))).join("")
+        + (noProf ? bar([{ n: noProf, cls: "grey" }], topP, `${noProf} interview(s) without a profile yet`, "<small>Profile not given yet</small>", `${noProf}`) : "")
+        + table(["Profile", "Interviews"], [...profs.map(x => [`${x.id}. ${x.text}`, x.interviews]), ...(noProf ? [["Profile not given yet", noProf]] : [])])
+        : none("No profile yet: add them under Question and profiles, or let the transcript check suggest one.")}</section>`;
+    // Themes: in how many interviews each one is central, or mentioned.
+    const ths = d?.themes || [], topT = max(ths.map(t => t.central + t.mentioned)), shown = ths.slice(0, 12);
+    const themes = `<section class="card"><div class="chart-h"><h3>Themes</h3>${p.codebook.exists ? '<button class="small" data-nav-go="codebook">Open the theme list</button>' : ""}</div>
+      <p class="chart-sub">In how many interviews each theme is central, or only mentioned. The most present first.</p>
+      ${ths.length && interpreted ? `<div class="legend-row"><span><i class="sw sup"></i>central</span><span><i class="sw light"></i>mentioned</span></div>
+        ${shown.map(t => bar([{ n: t.central }, { n: t.mentioned, cls: "light" }], topT, `${t.name}: central in ${t.central}, mentioned in ${t.mentioned} interview(s)${t.group ? ` · ${t.group}` : ""}`,
+          `${esc(t.name)}${t.group ? ` <small>${esc(t.group)}</small>` : ""}`, `${t.central} · ${t.mentioned}`)).join("")}
+        ${ths.length > shown.length ? `<p class="muted" style="margin:6px 0 0">+ ${ths.length - shown.length} more themes · <button class="link" data-sec="themes">see every theme, interview by interview</button></p>` : ""}
+        ${table(["Theme", "Central in", "Mentioned in"], ths.map(t => [t.name, t.central, t.mentioned]))}`
+        : none(ths.length ? `${ths.length} themes in the list: shown here once an interview has been re-read against them.` : "Built by an agent once the first interview has been read.")}</section>`;
+    // Earlier conclusions: supported, complicated or contradicted, interview by interview.
+    const prs = d?.priors || [];
+    const tested = (x) => x.supports + x.complicates + x.contradicts;
+    const priors = `<section class="card"><div class="chart-h"><h3>Earlier conclusions</h3><span class="muted">interviews</span></div>
+      <p class="chart-sub">How each conclusion you gave fares in the interviews.</p>
+      ${prs.length ? `<div class="legend-row"><span><i class="sw sup"></i>supports</span><span><i class="sw mid"></i>complicates</span><span><i class="sw con"></i>contradicts</span></div>
+        ${prs.map(x => `<div class="prow" tabindex="0" data-ct="${esc(`${x.text}: supported in ${x.supports}, complicated in ${x.complicates}, contradicted in ${x.contradicts} interview(s)`)}">
+          <div class="bl">${esc(x.text)}</div>${tested(x) ? `<div class="dbar">${[["sup", x.supports], ["mid", x.complicates], ["con", x.contradicts]].filter(([, n]) => n).map(([c, n]) => `<span class="${c}" style="flex:${n}"></span>`).join("")}</div>
+          <div class="bval">${x.supports} support · ${x.complicates} complicate · ${x.contradicts} contradict</div>` : `<div class="bval">${interpreted ? "not tested yet" : "tested once an interview is interpreted"}</div>`}</div>`).join("")}
+        ${d?.unmatched ? `<p class="muted" style="margin:8px 0 0">${d.unmatched} test${d.unmatched > 1 ? "s" : ""} by the agents could not be matched to one of your conclusions, so ${d.unmatched > 1 ? "they are" : "it is"} not counted.</p>` : ""}
+        ${table(["Conclusion", "Supports", "Complicates", "Contradicts"], prs.map(x => [x.text, x.supports, x.complicates, x.contradicts]))}`
+        : none("None given. Add earlier conclusions (for example from desk research) under Question and profiles to test them.")}</section>`;
+    // What is still missing, worked out from the numbers above.
+    const gaps = [];
+    if (!ivs.length) gaps.push(["Add your first interview: drop a transcript below", 'data-jump="interviews"']);
+    if (read) sqs.filter(x => x.findings < 3 && !x.other).forEach(x => gaps.push([`${x.id === "RQ" ? "The research question" : x.id} has little evidence (${x.findings} finding${x.findings === 1 ? "" : "s"})`, ""]));
+    profs.filter(x => !x.interviews).forEach(x => gaps.push([`No interview yet with profile ${x.id} (${x.role || x.text})`, ""]));
+    if (noProf) gaps.push([`${noProf} interview${noProf > 1 ? "s have" : " has"} no profile yet`, ""]);
+    if (interpreted) prs.filter(x => !tested(x)).forEach(x => gaps.push([`Not tested by any interview: “${x.text}”`, ""]));
+    if (interpreted > 1 && !d?.stale && ths.some(t => t.central + t.mentioned)) { const thin = ths.filter(t => t.central + t.mentioned <= 1).length; if (thin) gaps.push([`${thin} theme${thin > 1 ? "s rest" : " rests"} on a single interview`, 'data-nav-go="codebook"']); }
+    if (d?.stale) gaps.push([`${d.stale} interview${d.stale > 1 ? "s need" : " needs"} re-reading against the current theme list`, 'data-sec="themes"']);
+    if (d?.misses) gaps.push([`The agents noted ${d.misses} topic${d.misses > 1 ? "s" : ""} the theme list does not cover`, 'data-nav-go="codebook"']);
+    const approved = ivs.filter(iv => iv.final_approved).length;
+    if (ivs.length && approved < 2) gaps.push([`The comparison needs 2 approved interviews (${approved} so far)`, ""]);
+    if (waiting) gaps.push([`${waiting} decision${waiting > 1 ? "s wait" : " waits"} for you`, 'data-nav-go="review"']);
+    const missing = `<section class="card wide ${gaps.length ? "attn" : ""}" id="sec-missing"><h3>What is still missing</h3>
+      ${gaps.length ? `<ul class="gaps">${gaps.map(([t, go]) => `<li><span class="gi" aria-hidden="true">⚠</span><span>${esc(t)}</span>${go ? `<button class="small" ${go}>Open</button>` : "<span></span>"}</li>`).join("")}</ul>`
+        : '<p class="muted"><span style="color:var(--ok)">✓</span> Nothing obvious is missing: every question has evidence, every profile is interviewed, every conclusion is tested.</p>'}</section>`;
+    return `${errorBox()}<div class="spread"><h2 class="pg" style="margin:0">${esc(p.name)}</h2><span class="row">${(d?.grid || []).length ? '<button class="small" data-act="slides">▶ Present</button>' : ""}<button class="small" data-nav-go="overviewText">Text version</button></span></div>
+      <p class="lede" style="margin-top:4px">${esc(p.question)}</p>
+      ${freshCard(p)}${d ? `${kpis}<div class="dash">${missing}${covers}${who}${themes}${priors}</div>`
+        : `<div class="error">The dashboard's numbers could not be loaded (${esc(dErr || "no answer")}). <button class="small" data-act="dash-retry">Try again</button>
+            <button class="small" data-nav-go="overviewText">Open the text version</button></div>`}
+      <section class="card" id="sec-interviews"><div class="spread"><h3 style="margin:0">Where every interview stands</h3>
+          <span class="muted">★ you · ● running · ✓ done · ✕ stopped · ○ not started</span></div>
+        ${mapTable(p)}${dropZone(p)}</section>
+      ${flowCard(p)}
+      <details class="card" id="settings"><summary>Project settings: rename or delete the project</summary>
+        <div style="margin-top:10px">${icard({ id: "name", title: "Project name", src: "you", what: "Shown in the menu and on the reports.",
+          body: `<p class="value">${esc(p.name)}</p>`, editor: `<label class="field" for="ed-name">Project name</label><input type="text" id="ed-name" value="${esc(p.name)}">` })}</div>
+        ${deleteCard(p)}</details>`;
+  },
+
+  overviewText() {  // the overview as text: kept to compare with the dashboard
+    const p = project, ivs = visibleInterviews(p);
+    const words = ivs.reduce((n, iv) => n + (iv.words || 0), 0);
+    const counts = Object.fromEntries(["done", "running", "you", "failed", "todo"].map(k => [k, ivs.filter(iv => ivStatus(p, iv).state === k).length]));
+    const map = mapTable(p);
+    return `${errorBox()}<h2 class="pg">${esc(p.name)}</h2>
+      <p class="lede"><b>Research question:</b> ${esc(p.question)} <button class="link" data-nav-go="context">Question and profiles</button></p>
+${freshCard(p)}      <section class="card" id="sec-interviews"><div class="spread"><h3 style="margin:0">Where every interview stands <span class="count">${ivs.length}</span></h3>
+          <span class="muted">${words.toLocaleString()} words · ${counts.done} analysed · ${counts.you} need you · ${counts.running} running${counts.failed ? ` · ${counts.failed} stopped` : ""}</span></div>
+        ${ivs.length ? `<p class="muted legend" style="margin:6px 0 4px">Every interview goes through the same five phases, left to right. Click a phase to see its steps.
+          ★ your decision · ● running · ✓ done · ✕ stopped · ○ not started</p>` : ""}
+        ${map}
+${dropZone(p)}</section>
+${flowCard(p)}
       <details class="card" id="pipeline"><summary>How each interview is processed: the ${STEP_ORDER.length} steps, who does each, and what it produces</summary>
         ${PHASES.map((ph, i) => `<h4>${i + 1}. ${ph.name}</h4>${ph.steps.map(id => { const G = STEP_GUIDE[id], who = KIND_OF[id] ? "you" : ({ extract: "program", list: "program", split: "program", checks: "program", counts: "program" }[id] || "agent");
           return `<div class="pipe"><span class="who">${WHO_ICON[who]} ${WHO_KIND[who]}</span><div><b>${esc(G.title)}</b><div class="muted">${G.what}</div><div class="muted"><b>Produces:</b> ${G.produces}</div></div></div>`; }).join("")}`).join("")}</details>
       <details class="card" id="settings"><summary>Project settings: rename or delete the project</summary>
         <div style="margin-top:10px">${icard({ id: "name", title: "Project name", src: "you", what: "Shown in the menu and on the reports.",
           body: `<p class="value">${esc(p.name)}</p>`, editor: `<label class="field" for="ed-name">Project name</label><input type="text" id="ed-name" value="${esc(p.name)}">` })}</div>
-      <div class="icard" style="border-color:var(--bad);margin-top:12px">${confirmDelete
-        ? `<h3>Delete “${esc(p.name)}” permanently?</h3>
-           <p>This removes the project from this computer: its ${p.interviews.length} transcript(s), every finding, the theme list
-             and every report. It cannot be undone. Download anything you want to keep first.</p>
-           <div class="row"><button data-act="delete-cancel">Cancel</button>
-             <button data-act="delete-yes" style="background:var(--bad);border-color:var(--bad);color:var(--surface)">Yes, delete it permanently</button></div>`
-        : `<div class="spread"><div><h3>Delete this project</h3><div class="muted">Removes it and all its files from this computer.</div></div>
-           <button data-act="delete-ask" ${p.running ? "disabled title=\"Wait until the running step has finished\"" : ""}>Delete this project</button></div>`}</div></details>`;
+      ${deleteCard(p)}</details>`;
   },
 
   async check() {
@@ -2026,6 +2771,7 @@ const screens = {
       (cb.removed_by_researcher || []).forEach(r => { names[r.theme.id] ??= `${r.theme.name} (removed)`; }); }
     const R = p.reports.length ? (cache.rt ??= await api(`projects/${view.pid}/file/report-text`).catch(() => ({}))) : null;
     const Q = cache.quotes ??= await api(`projects/${view.pid}/quotes`);
+    const D = cache.dash ??= await api(`projects/${view.pid}/dashboard`).catch(() => ({ grid: [], themes: [], groups: [] }));
     const who = (xs) => (xs || []).map(x => esc(label[x] || x)).join(", ");
     const ready = c.approved.length >= 2, old = c.exists && (p.context_changed_at || 0) > (job.ended_at || 0);
     const waitingApproval = queue(p).filter(x => x.key.endsWith(":approve-final")).length;
@@ -2040,10 +2786,18 @@ const screens = {
     return `${errorBox()}<h2 class="pg">Results</h2>
       <p class="lede">The comparison across interviews, the final analysis, every quote checked, and the files to download.</p>
       <nav class="chips" aria-label="On this page">
+        <button data-jump="themes">Theme analysis <span class="tag ${(D.grid || []).length ? "ok" : "grey"}">${(D.grid || []).length ? `${D.grid.length} interview${D.grid.length > 1 ? "s" : ""}` : "after the first re-read"}</span></button>
         <button data-jump="cross">Cross-analysis <span class="tag ${d ? (old ? "warn" : "ok") : "grey"}">${p.running === "cross" ? "running" : d ? (old ? "older than your inputs" : "ready") : !ready ? `${c.approved.length} of 2 interviews approved` : waitingApproval ? "waiting for your approvals" : busyWith(p, "cross") ? "queued" : "starting"}</span></button>
         <button data-jump="final">Findings report <span class="tag ${R ? "ok" : "grey"}">${R ? "ready" : "not built yet"}</span></button>
         <button data-jump="quotes">Quote check <span class="tag ${Q.count.not_found || Q.count.off_record ? "bad" : Q.count.partial ? "warn" : "ok"}">${Q.count.off_record ? `${Q.count.off_record} off the record` : Q.count.not_found ? `${Q.count.not_found} not found` : `${Q.count.verified} of ${Q.total} verified`}</span></button>
         <button data-jump="export">Export</button></nav>
+
+      <section class="card" id="sec-themes"><div class="spread"><h3 style="margin:0">Theme analysis</h3>
+          ${(D.grid || []).length ? '<button class="primary" data-act="slides">▶ Present the results</button>' : ""}</div>
+        <p class="what">Which themes recur, interview by interview. It grows with each interview re-read against the theme list.
+          Click a theme to preview what the interviews say about it.</p>
+        ${themeGrid(D, d)}
+        ${d && (d.patterns || []).length ? `<h4>Shared patterns</h4><p class="chart-sub">Ranked by how many interviews share them. Open one to read its evidence.</p>${patternRows(d, D, label)}` : ""}</section>
 
       <section class="card" id="sec-cross"><div class="spread"><h3 style="margin:0">Cross-analysis</h3><span class="row">${d ? srcTag("ai") : ""}${d && ready ? aiActions("cross", "the cross-analysis") : ""}</span></div>
         <p class="what"><b>Your working comparison.</b> What the approved interviews share and where they differ, by theme and by profile. It runs by itself once two interviews are approved (and none is left waiting for your approval), and again after each new approval. Click ✎ to reword anything: the AI's original is kept.</p>
@@ -2054,10 +2808,10 @@ const screens = {
           : job.status === "failed" ? `<div class="error">It stopped. <button class="small" data-act="cross-run">Run it again</button> <button class="link" data-log="cross">Why it stopped</button></div>` : ""}
         ${d ? `<div class="meta"><span>Built</span> ${esc(d.built)} <span>From</span> ${who(d.interviews)}</div>
           <h4>Overview</h4><p>${X("cx-ov", d.overview, ["overview"], d, "overview")}</p>
-          <h4>Theme by theme</h4>${(d.by_theme || []).map((t, i) => `<div class="item"><b>${esc(names[t.theme_id] || t.theme_id)}</b>
+          <details id="cx-bytheme"><summary>Theme by theme, as text (to read in full or reword)</summary>${(d.by_theme || []).map((t, i) => `<div class="item"><b>${esc(names[t.theme_id] || t.theme_id)}</b>
             <div><span class="muted">Shared:</span> ${X(`cx-t${i}s`, t.shared, ["by_theme", i, "shared"], t, "shared")}</div>
             <div><span class="muted">Differences:</span> ${X(`cx-t${i}d`, t.differences, ["by_theme", i, "differences"], t, "differences")}</div>
-            <div><span class="muted">By profile:</span> ${X(`cx-t${i}p`, t.by_profile, ["by_theme", i, "by_profile"], t, "by_profile")}</div></div>`).join("")}
+            <div><span class="muted">By profile:</span> ${X(`cx-t${i}p`, t.by_profile, ["by_theme", i, "by_profile"], t, "by_profile")}</div></div>`).join("")}</details>
           <details><summary>By profile, shared patterns, where they differ, limits</summary>
             <h4>By profile</h4>${(d.by_profile || []).map((x, i) => `<div class="item"><b>${esc(x.profile)}</b><div>${X(`cx-p${i}`, x.what_stands_out, ["by_profile", i, "what_stands_out"], x, "what_stands_out")}</div></div>`).join("")}
             <h4>Shared patterns</h4>${(d.patterns || []).map((x, i) => `<div class="item"><b>${X(`cx-s${i}`, x.pattern, ["patterns", i, "pattern"], x, "pattern", false)}</b> <span class="muted">· ${who(x.interviews)}</span>
@@ -2148,11 +2902,12 @@ async function render() {
   const gen = ++renderGen;
   document.getElementById("crumb").textContent = project ? "› " + project.name : "";
   const name = view.screen in screens ? view.screen : "home";
-  if (!["home", "new"].includes(name) && !project) { view = { screen: "home" }; return render(); }
+  if (!["home", "new", "setup"].includes(name) && !project) { view = { screen: "home" }; return render(); }
   const side = document.getElementById("side"), layout = document.getElementById("layout");
   const key0 = `${name}|${view.slug || ""}`;
-  side.hidden = false;
-  layout.classList.remove("noside");
+  const alone = ["setup", "new"].includes(name);  // "Before you start" and a new project stand on their own
+  side.hidden = alone;
+  layout.classList.toggle("noside", alone);
   const sq = document.getElementById("psearch"), sv = sq ? sq.value : null, sf = sq && document.activeElement === sq;
   side.innerHTML = sidebar(project);
   const sq2 = document.getElementById("psearch");  // what is being typed in the search box survives the self-refresh
@@ -2168,7 +2923,9 @@ async function render() {
     [ctlKey(el), el.type === "checkbox" || el.type === "radio" ? { checked: el.checked }
       : { value: el.value, sel: el === document.activeElement && "selectionStart" in el ? [el.selectionStart, el.selectionEnd] : null }])) : null;
   // Long boxes (a live log) keep their scroll place; at the bottom, they follow the newest lines.
-  const scrolls = key === lastRendered ? [...app.querySelectorAll("pre.log, .ctx")].map(e => ({ top: e.scrollTop, end: e.scrollTop + e.clientHeight >= e.scrollHeight - 4 })) : null;
+  const SCROLLERS = "pre.log, .ctx, .tprev, .wrap";
+  const scrolls = key === lastRendered ? [...app.querySelectorAll(SCROLLERS)].map(e => ({ top: e.scrollTop, left: e.scrollLeft, end: e.scrollTop + e.clientHeight >= e.scrollHeight - 4 })) : null;
+  if (key !== lastRendered) document.getElementById("ctip")?.setAttribute("hidden", "");
   const pageY = window.scrollY;
   const focus = key === lastRendered ? document.activeElement?.id : "";
   const framed = project && !["home", "new"].includes(name);
@@ -2193,14 +2950,15 @@ async function render() {
   if (selection) { try { selection[0].focus(); selection[0].setSelectionRange(...selection[1]); } catch {} }
   if (document.getElementById("f-text")) applyFilters();
   if (scrolls) {
-    const boxes = [...app.querySelectorAll("pre.log, .ctx")];
-    if (boxes.length === scrolls.length) boxes.forEach((e, i) => { e.scrollTop = scrolls[i].end && name === "log" ? e.scrollHeight : scrolls[i].top; });
+    const boxes = [...app.querySelectorAll(SCROLLERS)];
+    if (boxes.length === scrolls.length) boxes.forEach((e, i) => { e.scrollTop = scrolls[i].end && name === "log" ? e.scrollHeight : scrolls[i].top; e.scrollLeft = scrolls[i].left; });
     window.scrollTo(0, pageY);
   }
   const nb = app.querySelector(".next-act .primary");  // one primary action per screen
   if (nb && [...app.querySelectorAll(".primary")].some(x => x !== nb && !x.closest(".stepper"))) nb.closest(".next-act").remove();
   // Arriving in Review, nothing keeps the focus, so Enter approves and → moves on (and no button is pressed by mistake).
   if (name === "review" && key !== lastRendered && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  if (name === "new" && key !== lastRendered) setTimeout(tfFocus, 0);
   if (key !== lastRendered) {  // opened at a section: Results › Quotes, Results › Cross-analysis
     const anchor = name === "cross" ? "cross" : name === "results" ? view.step : "";
     // A new page (or the next decision in Review) starts at its top, not where the last one was scrolled to.
@@ -2257,6 +3015,31 @@ async function act(name) {
     if (["approve-check", "approve-final", "codebook-approve"].includes(name)) await saveOpenEdits();
     switch (name) {
       case "home": return go("home");
+      case "slides": await openSlides(); return;  // awaited, so a failure shows its message
+      case "dash-retry": cache.dash = null; return render();
+      case "tf-cancel": store.set(DRAFT_KEY, {}); tfBack = ""; tfError = ""; return go("home");
+      case "key-open": keyOpen = true; await render(); document.getElementById("api-key")?.focus(); return;
+      case "key-close": keyOpen = false; return render();
+      case "key-save": {
+        const key = val("api-key").trim();
+        if (!key) return showError("Paste your API key in the box first.");
+        claude = await api("claude/key", { key }); showBadge();
+        document.getElementById("api-key").value = ""; keyOpen = false; note("Key saved · testing it");
+        return act("claude-test");  // the key is tried at once: one short question
+      }
+      case "key-remove": claude = await api("claude/key", { remove: true }); showBadge(); claudeTest = null; note("Key removed"); return render();
+      case "claude-recheck": note("Checking…"); await checkClaude(true); note(""); return render();
+      case "claude-login": await api("claude/login", {}); loginStarted = true; return render();
+      case "claude-test": {  // up to two minutes: the page stays usable meanwhile
+        claudeTest = { running: true }; render();
+        api("claude/test", {}).then(r => { claudeTest = r; }, e => { claudeTest = { ok: false, message: e.message }; }).then(() => { if (view.screen === "setup") render(); });
+        return;
+      }
+      case "setup-continue": {
+        try { sessionStorage.setItem(SETUP_KEY, "1"); } catch {}
+        const to = setupReturn && setupReturn.screen !== "setup" ? setupReturn : { screen: "home" };
+        setupReturn = null; return show(to, true);
+      }
       case "start-all": {
         askNotify();  // so the platform can tell you when a decision waits, while you do something else
         for (const sel of document.querySelectorAll("[data-setup-who]")) {
@@ -2309,18 +3092,25 @@ async function act(name) {
         confirmDelete = false; navStack = navStack.filter(v => v.pid !== pid); saveNav();
         project = null; view.pid = null; note("Project deleted"); return go("home");
       }
-      case "np-add": { const d = saveDraft(); d.profiles = [...draftProfiles(), { role: "", org_type: "", sector: "" }]; store.set(DRAFT_KEY, d); return render(); }
+      case "np-add": {
+        const n = draftProfiles().length;
+        setDraft({ profiles: [...draftProfiles(), { role: "", org_type: "", sector: "" }] }); lastRendered = ""; await render();
+        app.querySelector(`[data-np="${n}"][data-npk="role"]`)?.focus(); return;
+      }
       case "nav-project": return go("project");
       case "new": return go("new");
       case "back": return back();
       case "create": {
-        if (projects.some(x => x.name.trim().toLowerCase() === val("pname").trim().toLowerCase()) && confirmSameName !== val("pname").trim()) {
-          confirmSameName = val("pname").trim();
-          return showError(`A project called “${confirmSameName}” already exists. Click Create project again to make a second one with the same name.`);
+        const d = draft(), nm = (d.name || "").trim();
+        if (!nm) return tfGo("name");
+        if (!(d.question || "").trim()) return tfGo("question");
+        if (projects.some(x => x.name.trim().toLowerCase() === nm.toLowerCase()) && confirmSameName !== nm) {
+          confirmSameName = nm;
+          return showError(`A project called “${nm}” already exists. Click “Create the project” again to make a second one with the same name.`);
         }
         note("Setting up the project…");
-        const p = await api("projects", { name: val("pname"), question: val("pq"), sub_questions: val("psubs"), priors: val("ppriors"),
-                                          profiles: draftProfiles() });
+        const p = await api("projects", { name: nm, question: d.question.trim(), sub_questions: d.subs || "", priors: d.priors || "",
+                                          profiles: (d.profiles || []).filter(pr => (pr.role || "").trim()) });
         store.set(DRAFT_KEY, {}); note(""); view.pid = p.id; return go("project");
       }
 
@@ -2366,7 +3156,7 @@ async function quickDecide(slug) {
 // In the Review, a decision made leads straight to the next one; elsewhere, back to its interview.
 function afterDecision(slug) {
   if (view.screen === "review") { note("Done · next decision"); show({ screen: "review", pid: view.pid }); return; }
-  return slug ? go("interview", { slug }) : go("analysis");
+  return slug ? go("interview", { slug }) : go("project");
 }
 // Removing takes one click; it only really happens after 8 seconds, unless "Undo" is pressed.
 const pendingRemoval = new Set();
@@ -2515,6 +3305,10 @@ async function onClick(e, b) {
   if (d.refineGo) { const t = val("rf-text").trim(); if (!t) return showError("Write the instruction first."); return runAgain(d.refineGo, t); }
   if (d.jump) { document.getElementById("sec-" + d.jump)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (d.sec) return go("results", { step: d.sec, slug: d.slug || "" });
+  if (d.themePick) { themeSel = d.themePick; return render(); }
+  if (d.tf) return tfGo(d.tf === "next" ? 1 : -1);
+  if (d.tfgo) return tfGo(d.tfgo);
+  if (d.from !== undefined) return tfFrom(d.from);
   if (d.act) return act(d.act);
   if (d.open) { view.pid = d.open; return go("project"); }
   if (d.continue) { view.pid = d.continue; return go(d.to); }
@@ -2524,7 +3318,8 @@ async function onClick(e, b) {
   if (d.dupAdd !== undefined) { const [x] = dupes.splice(+d.dupAdd, 1); return upload([x.file], true); }
   if (d.step) return go("step", { slug: d.slug, step: d.step });
   if (d.iv) return go("interview", { slug: d.iv });
-  if (d.phase) { const el = document.getElementById("phase-" + d.phase); if (el) { el.open = true; el.scrollIntoView({ behavior: "smooth", block: "start" }); } return; }
+  if (d.phase) { phaseSel[`${view.pid}/${view.slug}`] = { id: d.phase, at: nowPhase(view.slug) }; return render(); }
+  if (d.ivphase) { const [slug, ph] = d.ivphase.split("|"); phaseSel[`${view.pid}/${slug}`] = { id: ph, at: nowPhase(slug) }; return go("interview", { slug }); }
   if (d.prompts) return go("prompts", { slug: d.prompts });
   if (d.dl) return downloadReport(d.dl, d.slug || "");
   if (d.quick) { try { await quickDecide(d.slug); note("Confirmed"); return load(); } catch (err) { return showError(err.message); } }
@@ -2544,20 +3339,6 @@ async function onClick(e, b) {
   if (d.delmap) return saveMeta(m => { delete m[d.delmap][d.k]; }).then(render);
 }
 app.addEventListener("change", async (e) => {
-  if (e.target.id === "pfrom") {  // fill the form from an existing project (or empty it again); everything stays editable
-    try {
-      const name = val("pname");
-      if (!e.target.value) store.set(DRAFT_KEY, { name });
-      else {
-        const src = await api("projects/" + e.target.value);
-        store.set(DRAFT_KEY, { name, from: src.id, question: src.question, subs: src.sub_questions.join("\n"), priors: src.priors.join("\n"),
-                               profiles: (src.profiles || []).map(({ role, org_type, sector }) => ({ role, org_type, sector })) });
-        note(`Copied from ${src.name}`);
-      }
-      lastRendered = "";  // the form is filled anew: what was in the boxes before must not be put back
-      return render();
-    } catch (err) { return showError(err.message); }
-  }
   if (e.target.dataset.setupWho) {  // the set-up table: whoever is not the interviewee listens
     const sl = e.target.dataset.setupWho, cell = document.querySelector(`[data-setup-others="${CSS.escape(sl)}"]`);
     if (cell) cell.textContent = [...e.target.options].map(o => o.value).filter(v => v !== e.target.value).join(", ") || "—";
@@ -2569,20 +3350,25 @@ app.addEventListener("change", async (e) => {
   if (t.dataset.theme) return api(`${base}/codebook/edit`, { themes: { [t.dataset.theme]: t.value } }).then(() => { cache.cb = null; note("All changes saved"); }, err => showError(err.message));
   if (t.dataset.group) return api(`${base}/codebook/edit`, { groups: { [t.dataset.group]: t.value } }).then(() => { cache.cb = null; note("All changes saved"); }, err => showError(err.message));
 });
-function draftProfiles() {
-  const rows = {};
-  document.querySelectorAll("[data-np]").forEach(el => { (rows[el.dataset.np] ||= {})[el.dataset.npk] = el.value; });
-  return Object.keys(rows).sort((a, b) => a - b).map(k => rows[k]);
-}
-function saveDraft() {
-  const d = { name: val("pname"), question: val("pq"), subs: val("psubs"), priors: val("ppriors"), profiles: draftProfiles(),
-              from: store.get(DRAFT_KEY, {}).from };
-  store.set(DRAFT_KEY, d);
-  return d;
-}
-app.addEventListener("input", (e) => {  // the new-project form is saved as you type
-  if (["pname", "pq", "psubs", "ppriors"].includes(e.target.id) || e.target.dataset.np !== undefined) {
-    saveDraft(); note("Draft saved");
+app.addEventListener("input", (e) => {  // the new project's answers are kept as you type
+  const k = { "tf-name": "name", "tf-question": "question", "tf-subs": "subs", "tf-priors": "priors" }[e.target.id];
+  if (k) { setDraft({ [k]: e.target.value }); if (tfError) { tfError = ""; app.querySelector(".tf-err")?.remove(); } }
+  if (e.target.dataset.np !== undefined) setDraft({ profiles: draftProfiles() });
+});
+document.addEventListener("keydown", (e) => {
+  if (view.screen !== "new" || e.altKey || e.isComposing) return;
+  const t = e.target, at = draft().at || newSteps()[0];
+  if (e.key === "Enter") {
+    if (t.tagName === "BUTTON") return;  // a focused button does its own thing
+    if (t.tagName === "TEXTAREA" && t.id !== "tf-question" && !(e.ctrlKey || e.metaKey)) return;  // a new line in a list
+    if (t.id === "tf-question" && e.shiftKey) return;
+    if (e.repeat || Date.now() - tfArrived < 300) { e.preventDefault(); return; }  // held down, or pressed twice
+    e.preventDefault();
+    return at === "review" ? act("create") : tfGo(1);
+  }
+  if (at === "from" && !["INPUT", "TEXTAREA"].includes(t.tagName) && /^[a-z]$/i.test(e.key) && !e.ctrlKey && !e.metaKey) {
+    const b = app.querySelectorAll(".tf-choice")[e.key.toUpperCase().charCodeAt(0) - 65];
+    if (b) { e.preventDefault(); b.click(); }
   }
 });
 // The findings filters: hide what does not match, and say how many are left.
@@ -2614,7 +3400,21 @@ app.addEventListener("dragover", (e) => { const d = e.target.closest("#drop"); i
 app.addEventListener("dragleave", (e) => { e.target.closest("#drop")?.classList.remove("over"); });
 app.addEventListener("drop", (e) => { if (e.target.closest("#drop")) { e.preventDefault(); upload([...e.dataTransfer.files]); } });
 
+const ctip = Object.assign(document.createElement("div"), { id: "ctip", role: "tooltip", hidden: true });
+document.body.append(ctip);
+const showTip = (el, x, y) => { ctip.textContent = el.dataset.ct; ctip.hidden = false;
+  const r = ctip.getBoundingClientRect(); ctip.style.left = `${Math.min(window.innerWidth - r.width - 8, x + 12)}px`; ctip.style.top = `${Math.max(8, y - r.height - 10)}px`; };
+app.addEventListener("pointermove", (e) => { const el = e.target.closest("[data-ct]"); if (el) showTip(el, e.clientX, e.clientY); else ctip.hidden = true; });
+app.addEventListener("pointerleave", () => { ctip.hidden = true; });
+app.addEventListener("focusin", (e) => { const el = e.target.closest("[data-ct]"); if (!el) return; const r = el.getBoundingClientRect(); showTip(el, r.left + 40, r.top); });
+app.addEventListener("focusout", () => { ctip.hidden = true; });
 load();
+// Claude not ready: "Before you start" opens by itself, once per visit (then only from the badge).
+checkClaude().then(() => {
+  let seen = false; try { seen = !!sessionStorage.getItem(SETUP_KEY); } catch {}
+  if (view.screen === "setup") return render();
+  if (claude && !claudeReady() && !seen) openSetup();
+});
 </script>
 </body>
 </html>
