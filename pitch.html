@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, height=720">
+<title>Interview Analysis Pitch</title>
+<!-- The 90-second animated introduction: drawn mockups, not screenshots. Recorded to MP4 by record_pitch.py. -->
+<style>
+  :root { --bg: #f6f4ef; --ink: #1c2430; --muted: #5f6670; --line: #dcd9d2; --card: #ffffff;
+          --c1: #2c6fb3; --c1s: #dbe7f4; --c2: #c2661c; --c2s: #f6e3d2; --ok: #2f8a57; --oks: #dcefe3; --you: #b7791f; --yous: #fbefd9; }
+  * { box-sizing: border-box; }
+  html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #11161c; }
+  body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: var(--bg); color: var(--ink); transform-origin: 0 0;
+         font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif; position: relative; }
+  .serif { font-family: Georgia, "Source Serif 4", serif; }
+  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity .6s ease; pointer-events: none; }
+  .scene.on { opacity: 1; }
+  .cap { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; max-width: 1080px; bottom: 46px; transform: translateY(12px); opacity: 0; text-align: center;
+         font-size: 30px; line-height: 1.3; font-weight: 600; transition: all .5s ease; }
+  .cap.on { opacity: 1; transform: none; }
+  .cap small { display: block; font-size: 19px; font-weight: 400; color: var(--muted); margin-top: 6px; }
+  .pop { opacity: 0; transform: translateY(18px) scale(.97); transition: opacity .5s ease, transform .5s cubic-bezier(.2,.8,.3,1.2); }
+  .pop.on { opacity: 1; transform: none; }
+  .kicker { letter-spacing: .16em; text-transform: uppercase; color: var(--c1); font-weight: 700; font-size: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(28,36,48,.08); }
+  .tag { display: inline-block; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .t-ok { background: var(--oks); color: var(--ok); } .t-you { background: var(--yous); color: var(--you); } .t-ai { background: var(--c1s); color: var(--c1); }
+  .bar { height: 10px; border-radius: 6px; background: #ece9e2; overflow: hidden; } .bar i { display: block; height: 100%; width: 0; background: var(--c1); transition: width 1.2s ease; }
+  .line { height: 9px; border-radius: 5px; background: #e7e3db; margin: 7px 0; }
+
+  /* 1. title */
+  #s1 { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #11161c; color: #f3f4f6; }
+  #s1 h1 { font-size: 72px; margin: 14px 0 12px; font-weight: 600; }
+  #s1 p { font-size: 28px; color: #aeb6c0; margin: 0; }
+  #s1 .kicker { color: #8ab8da; }
+  /* 2. the problem: transcripts piling up */
+  .doc { position: absolute; width: 150px; height: 190px; padding: 18px 16px; }
+  .doc b { font-size: 13px; color: var(--muted); }
+  #pile { position: absolute; left: 140px; top: 120px; width: 520px; height: 420px; }
+  #s2 .big { position: absolute; left: 720px; top: 170px; }
+  #s2 .big div { font-size: 64px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  #s2 .big span { font-size: 22px; color: var(--muted); display: block; margin-bottom: 26px; }
+  /* 3. who does what */
+  #actors { position: absolute; left: 0; right: 0; top: 130px; display: flex; justify-content: center; gap: 46px; }
+  .actor { width: 300px; padding: 26px; text-align: center; }
+  .actor .ic { width: 86px; height: 86px; border-radius: 50%; margin: 0 auto 14px; display: grid; place-items: center; font-size: 40px; }
+  .actor h3 { margin: 0 0 6px; font-size: 26px; } .actor p { margin: 0; font-size: 18px; color: var(--muted); line-height: 1.4; }
+  /* 4. the five phases */
+  #phases { position: absolute; left: 70px; right: 70px; top: 150px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  .ph { position: relative; padding: 18px 16px 16px; border: 2px solid var(--line); transition: border-color .4s, background .4s, transform .4s; }
+  .ph .n { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 20px;
+           background: #ece9e2; color: var(--muted); transition: all .4s; margin-bottom: 10px; }
+  .ph h4 { margin: 0 0 10px; font-size: 22px; }
+  .ph .st { font-size: 14.5px; margin: 6px 0; display: flex; gap: 7px; align-items: center; opacity: .35; transition: opacity .4s; }
+  .ph .st .w { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex: none; }
+  .w.p { background: #e9e6df; color: var(--muted); } .w.a { background: var(--c1s); color: var(--c1); } .w.y { background: var(--yous); color: var(--you); }
+  .ph.lit { border-color: var(--c1); background: #fbfdff; transform: translateY(-6px); }
+  .ph.lit .n { background: var(--c1); color: #fff; } .ph.lit .st { opacity: 1; }
+  .ph.done { border-color: #b9d3c3; } .ph.done .n { background: var(--ok); color: #fff; } .ph.done .st { opacity: .8; }
+  #track { position: absolute; left: 70px; right: 70px; top: 120px; height: 6px; border-radius: 3px; background: #e7e3db; }
+  #track i { display: block; height: 100%; width: 0; background: var(--c1); border-radius: 3px; transition: width .9s ease; }
+  #legend { position: absolute; left: 70px; top: 470px; display: flex; gap: 26px; font-size: 16px; color: var(--muted); }
+  #legend span { display: flex; gap: 8px; align-items: center; }
+  /* 5. quote check */
+  #qt { position: absolute; left: 90px; top: 110px; width: 520px; padding: 22px 24px; font-size: 16px; line-height: 1.75; }
+  #qt .ln { color: #9aa1aa; display: inline-block; width: 34px; font-variant-numeric: tabular-nums; }
+  #qt mark { background: transparent; transition: background .6s; border-radius: 3px; } #qt mark.on { background: #ffe9a8; }
+  #qq { position: absolute; left: 680px; top: 150px; width: 500px; padding: 24px; }
+  #qq blockquote { margin: 10px 0 14px; font-size: 22px; font-style: italic; border-left: 4px solid var(--c1); padding-left: 14px; }
+  #stamp { position: absolute; right: 22px; top: -18px; transform: rotate(-8deg) scale(1.6); opacity: 0; transition: all .4s cubic-bezier(.2,.8,.3,1.4);
+           background: var(--ok); color: #fff; font-weight: 700; padding: 8px 16px; border-radius: 10px; font-size: 20px; }
+  #stamp.on { opacity: 1; transform: rotate(-8deg) scale(1); }
+  #arrow { position: absolute; left: 612px; top: 250px; font-size: 54px; color: var(--c1); }
+  /* 6. review */
+  #queue { position: absolute; left: 150px; top: 92px; display: flex; gap: 10px; }
+  #queue span { font-size: 15px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; white-space: nowrap; overflow: hidden; max-width: 340px;
+                transition: background .4s, color .4s, opacity .4s, max-width .5s ease .2s, padding .5s ease .2s, margin .5s ease .2s; }
+  #queue span.cur { background: var(--c1); color: #fff; border-color: var(--c1); } #queue span.gone { opacity: 0; max-width: 0; padding-left: 0; padding-right: 0; margin-right: -10px; border-width: 0; }
+  .dec { position: absolute; left: 150px; top: 150px; width: 980px; height: 360px; padding: 26px 30px; transition: transform .6s ease, opacity .6s ease; }
+  .dec.out { transform: translateX(-120%); opacity: 0; } .dec.wait { transform: translateX(120%); opacity: 0; }
+  .dec h3 { margin: 0 0 12px; font-size: 26px; } .dec .flag { padding: 10px 14px; border-radius: 10px; background: #faf6ec; margin: 8px 0; font-size: 17px; }
+  .btn { position: absolute; right: 30px; bottom: 26px; background: var(--c1); color: #fff; font-weight: 600; font-size: 19px; padding: 12px 26px; border-radius: 10px; transition: transform .15s; }
+  .btn.press { transform: scale(.93); background: #23599a; }
+  #cursor { position: absolute; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--c1); background: rgba(44,111,179,.25);
+            left: 640px; top: 600px; transition: left .9s ease, top .9s ease, transform .15s; z-index: 5; }
+  #cursor.down { transform: scale(.7); }
+  /* 7. dashboard */
+  #kpis { position: absolute; left: 80px; right: 80px; top: 80px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .kpi { padding: 16px 20px; } .kpi .l { font-size: 15px; color: var(--muted); } .kpi .v { font-size: 46px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  #chart { position: absolute; left: 80px; top: 230px; width: 540px; height: 330px; padding: 20px 22px; }
+  #chart .row { display: grid; grid-template-columns: 130px 1fr 36px; gap: 12px; align-items: center; margin: 12px 0; font-size: 15px; }
+  #chart .bar { height: 16px; }
+  #grid { position: absolute; left: 660px; top: 230px; width: 540px; height: 330px; padding: 20px 22px; }
+  #grid table { border-collapse: separate; border-spacing: 5px; } #grid td { width: 54px; height: 30px; border-radius: 6px; background: #efece6; transition: background .5s; }
+  #grid th { font-size: 13px; color: var(--muted); font-weight: 500; text-align: left; padding-right: 8px; }
+  h5 { margin: 0 0 6px; font-size: 18px; }
+  .miss { position: absolute; left: 80px; top: 580px; width: 1120px; padding: 10px 18px; font-size: 16px; background: #fff8ee; border: 1px solid #f0d9b8; border-radius: 10px; }
+  /* 8. results */
+  #slide { position: absolute; left: 90px; top: 110px; width: 560px; height: 315px; background: #11161c; border-radius: 14px; padding: 18px; }
+  #slide .in { width: 100%; height: 100%; background: #fbfaf7; border-radius: 8px; padding: 26px 30px; transition: opacity .3s; }
+  #slide h4 { margin: 0 0 16px; font-size: 32px; } #slide li { font-size: 22px; margin: 10px 0; }
+  .word { position: absolute; top: 120px; width: 230px; height: 300px; padding: 22px 20px; }
+  .word .hd { font-weight: 700; margin-bottom: 10px; font-size: 16px; }
+  .word p { font-size: 14.5px; line-height: 1.55; margin: 6px 0; }
+  .nm { transition: all .5s; border-radius: 4px; padding: 0 2px; } .nm.hide { background: #e7e3db; color: var(--muted); }
+  /* 9. privacy + end */
+  #s9 { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  #laptop { width: 330px; height: 200px; border: 10px solid #2a313b; border-radius: 14px 14px 4px 4px; background: #fff; position: relative; display: grid; place-items: center; }
+  #laptop:after { content: ""; position: absolute; left: -46px; right: -46px; bottom: -26px; height: 16px; background: #2a313b; border-radius: 0 0 14px 14px; }
+  #laptop .lock { font-size: 64px; }
+  #s9 h2 { font-size: 40px; margin: 54px 0 8px; } #s9 p { font-size: 22px; color: var(--muted); margin: 0; }
+  #s10 { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #11161c; color: #f3f4f6; }
+  #s10 h1 { font-size: 54px; margin: 12px 0 18px; font-weight: 600; } #s10 p { font-size: 24px; color: #aeb6c0; margin: 4px 0; }
+  #s10 .url { margin-top: 26px; font-size: 26px; color: #8ab8da; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- 1. title -->
+<section class="scene" id="s1">
+  <div class="kicker pop" data-at="200">Interview analysis</div>
+  <h1 class="serif pop" data-at="600">From transcripts to findings</h1>
+  <p class="pop" data-at="1300">AI agents do the reading. You keep the decisions.</p>
+</section>
+
+<!-- 2. the problem -->
+<section class="scene" id="s2">
+  <div id="pile"></div>
+  <div class="big">
+    <div class="pop count" data-at="900" data-to="30">0</div><span class="pop" data-at="900">interviews</span>
+    <div class="pop count" data-at="1600" data-to="300000">0</div><span class="pop" data-at="1600">words to read, code and compare</span>
+    <div class="pop" data-at="2400" style="font-size:34px;color:var(--c2)">1 researcher</div>
+  </div>
+  <div class="cap" data-at="400" data-until="6500">Interviews pile up. Reading them well takes weeks.<small>And every finding must rest on what was really said.</small></div>
+</section>
+
+<!-- 3. who does what -->
+<section class="scene" id="s3">
+  <div id="actors">
+    <div class="actor card pop" data-at="300"><div class="ic" style="background:#ece9e2">⚙</div><h3>The program</h3><p>Fixed rules: splits the text, checks every quote word for word, counts.</p></div>
+    <div class="actor card pop" data-at="1100"><div class="ic" style="background:var(--c1s)">✦</div><h3>AI agents</h3><p>Read each interview five ways, suggest themes, read between the lines.</p></div>
+    <div class="actor card pop" data-at="1900"><div class="ic" style="background:var(--yous)">★</div><h3>You</h3><p>Say who is who, confirm, reword, approve. Nothing moves on without you.</p></div>
+  </div>
+  <div class="cap" data-at="2800" data-until="8500">Three roles, always visible: the program, the AI, and you.</div>
+</section>
+
+<!-- 4. the five phases -->
+<section class="scene" id="s4">
+  <div id="track"><i></i></div>
+  <div id="phases">
+    <div class="ph card" data-ph="0"><div class="n">1</div><h4>Prepare</h4>
+      <div class="st"><span class="w p">⚙</span>Text extracted</div><div class="st"><span class="w y">★</span>Who is who</div><div class="st"><span class="w a">✦</span>Transcript check</div></div>
+    <div class="ph card" data-ph="1"><div class="n">2</div><h4>Read</h4>
+      <div class="st"><span class="w p">⚙</span>Split in parts</div><div class="st"><span class="w a">✦</span>Five readers</div><div class="st"><span class="w p">⚙</span>Quote check</div></div>
+    <div class="ph card" data-ph="2"><div class="n">3</div><h4>Themes</h4>
+      <div class="st"><span class="w a">✦</span>Theme list</div><div class="st"><span class="w y">★</span>You approve it</div></div>
+    <div class="ph card" data-ph="3"><div class="n">4</div><h4>Interpret</h4>
+      <div class="st"><span class="w a">✦</span>Re-read by theme</div><div class="st"><span class="w a">✦</span>Behind the lines</div></div>
+    <div class="ph card" data-ph="4"><div class="n">5</div><h4>Approve</h4>
+      <div class="st"><span class="w y">★</span>You approve</div><div class="st"><span class="w a">✦</span>Cross-analysis</div></div>
+  </div>
+  <div id="legend" class="pop" data-at="400"><span><span class="w p" style="width:22px;height:22px;border-radius:50%;display:grid;place-items:center">⚙</span>program</span>
+    <span><span class="w a" style="width:22px;height:22px;border-radius:50%;display:grid;place-items:center">✦</span>AI agent</span>
+    <span><span class="w y" style="width:22px;height:22px;border-radius:50%;display:grid;place-items:center">★</span>your decision</span></div>
+  <div class="cap" id="phcap" data-at="300" data-until="16500">Every interview goes through the same five phases.</div>
+</section>
+
+<!-- 5. the quote check -->
+<section class="scene" id="s5">
+  <div id="qt" class="card pop" data-at="200">
+    <div><span class="ln">41</span>Q: And who decides which tools you use?</div>
+    <div><span class="ln">42</span>A: Honestly, <mark id="hl">nobody wrote a rule for it, we just</mark></div>
+    <div><span class="ln">43</span><mark id="hl2">ask the one colleague who knows</mark>.</div>
+    <div><span class="ln">44</span>Q: Is there a policy on data?</div>
+    <div><span class="ln">45</span>A: There is a document, yes. Nobody has read it.</div>
+  </div>
+  <div id="arrow" class="pop" data-at="1500">→</div>
+  <div id="qq" class="card pop" data-at="1100" style="position:absolute">
+    <span class="tag t-ai">Finding · AI reader</span>
+    <blockquote class="serif">“nobody wrote a rule for it, we just ask the one colleague who knows”</blockquote>
+    <div style="color:var(--muted);font-size:15px">Decisions rest on one trusted person, not on rules.</div>
+    <div id="stamp">✓ Verified · line 42</div>
+  </div>
+  <div class="cap" data-at="600" data-until="9500">Every quote is checked word for word against the transcript.<small>A quote that is not there never reaches your results.</small></div>
+</section>
+
+<!-- 6. review -->
+<section class="scene" id="s6">
+  <div id="queue"><span class="cur" id="q1">1 · Interview 2 · transcript check</span><span id="q2">2 · Theme list</span><span id="q3">3 · Interview 1 · approve</span></div>
+  <div class="dec card" id="d1">
+    <h3>Interview 2 · worth a look before you confirm</h3>
+    <div class="flag">⚠ Line 88 may be under the wrong speaker</div>
+    <div class="flag">⚠ “AI” heard as “a eye”: corrected</div>
+    <div class="flag">Interviewee profile: <b>Programme lead, small NGO, transparency</b> <span class="tag t-you">your choice</span></div>
+    <div class="btn" id="b1">Confirm and continue</div>
+  </div>
+  <div class="dec card wait" id="d2">
+    <h3>Theme list · 14 themes from 2 interviews</h3>
+    <div class="flag"><b>A person beats a policy</b>: trusted individuals shape AI use more than written rules</div>
+    <div class="flag"><b>Values on paper, tools in practice</b>: the friction is managed case by case</div>
+    <div class="flag" style="color:var(--muted)">✎ Reword any theme · ✦ Refine with an instruction · ↺ Regenerate</div>
+    <div class="btn" id="b2">Approve</div>
+  </div>
+  <div class="dec card wait" id="d3">
+    <h3>Interview 1 · re-read and behind the lines</h3>
+    <div class="flag">Central themes: <b>A person beats a policy</b>, <b>Values on paper, tools in practice</b></div>
+    <div class="flag">Behind the lines: rules are written for funders; practice runs on trust <span class="tag t-ai">confidence: medium</span></div>
+    <div class="flag" style="color:var(--muted)">✎ Reword anything wrong, then approve</div>
+    <div class="btn">Approve</div>
+  </div>
+  <div id="cursor"></div>
+  <div class="cap" data-at="300" data-until="11000">Every decision waits for you in one place, Review.<small>Reword anything the AI got wrong: its original is always kept.</small></div>
+</section>
+
+<!-- 7. dashboard -->
+<section class="scene" id="s7">
+  <div id="kpis">
+    <div class="kpi card pop" data-at="200"><div class="l">Interviews</div><div class="v count" data-to="12">0</div></div>
+    <div class="kpi card pop" data-at="400"><div class="l">Findings, quotes checked</div><div class="v count" data-to="1046">0</div></div>
+    <div class="kpi card pop" data-at="600"><div class="l">Themes</div><div class="v count" data-to="19">0</div></div>
+    <div class="kpi card pop" data-at="800"><div class="l">Your decisions waiting</div><div class="v count" data-to="2">0</div></div>
+  </div>
+  <div id="chart" class="card pop" data-at="1000"><h5>What each question has gathered</h5>
+    <div class="row"><span>Where AI appears</span><div class="bar"><i data-w="88"></i></div><b>142</b></div>
+    <div class="row"><span>Who decides</span><div class="bar"><i data-w="70"></i></div><b>113</b></div>
+    <div class="row"><span>Values tension</span><div class="bar"><i data-w="64"></i></div><b>104</b></div>
+    <div class="row"><span>What data goes in</span><div class="bar"><i data-w="41"></i></div><b>66</b></div>
+    <div class="row"><span>Staff understanding</span><div class="bar"><i data-w="9" style="background:var(--c2)"></i></div><b>14</b></div>
+  </div>
+  <div id="grid" class="card pop" data-at="1300"><h5>Themes, interview by interview</h5><table id="gt"></table></div>
+  <div class="miss pop" data-at="4200">⚠ <b>What is still missing:</b> “Staff understanding” has little evidence · 2 themes rest on a single interview</div>
+  <div class="cap" data-at="2200" data-until="10500" style="bottom:118px">The whole project at a glance.</div>
+</section>
+
+<!-- 8. results -->
+<section class="scene" id="s8">
+  <div id="slide" class="pop" data-at="200"><div class="in" id="slin"></div></div>
+  <div class="word card pop" data-at="1400" style="left:700px"><div class="hd">Interim findings · full</div>
+    <p>The programme lead at <span class="nm">Northside Watch</span> says AI use started with <span class="nm">Ana</span>, in <span class="nm">2021</span>.</p>
+    <p><i>“we just ask the one colleague who knows”</i></p><div class="line" style="width:90%"></div><div class="line" style="width:70%"></div></div>
+  <div class="word card pop" data-at="2200" style="left:960px"><div class="hd">Shareable copy</div>
+    <p>The interviewee at <span class="nm hide2">Northside Watch</span> says AI use started with <span class="nm hide2">Ana</span>, in <span class="nm hide2">2021</span>.</p>
+    <p style="color:var(--muted)">No quotes.</p><div class="line" style="width:90%"></div><div class="line" style="width:70%"></div></div>
+  <div class="cap" data-at="600" data-until="10500">Results as slides in the page, and as Word reports.<small>The shareable copy has no quotes, and names and identifying details are replaced.</small></div>
+</section>
+
+<!-- 9. privacy -->
+<section class="scene" id="s9">
+  <div id="laptop" class="pop" data-at="200"><span class="lock">🔒</span></div>
+  <h2 class="serif pop" data-at="900">Runs on your own computer</h2>
+  <p class="pop" data-at="1500">Your projects stay in a folder you own. Your own Claude account, or your own API key.</p>
+</section>
+
+<!-- 10. end -->
+<section class="scene" id="s10">
+  <div class="kicker pop" data-at="200" style="color:#8ab8da">Try it</div>
+  <h1 class="serif pop" data-at="500">Every finding traceable to a verified quote.<br>Every decision yours.</h1>
+  <p class="pop" data-at="1200">A click-through demo with invented interviews and simulated agents:</p>
+  <div class="url pop" data-at="1600">richard6433.github.io/interview-analysis-demo</div>
+</section>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const timers = [];
+const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+
+function countUp(el, ms = 1200) {
+  const to = +el.dataset.to, t0 = performance.now();
+  const step = (t) => { const k = Math.min(1, (t - t0) / ms), v = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    el.textContent = v.toLocaleString("en-GB"); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+// Show a scene: its elements with data-at appear at that time; captions leave at data-until.
+function play(id) {
+  const sc = document.getElementById(id);
+  $$(".scene").forEach(s => s.classList.toggle("on", s === sc));
+  $$("[data-at]", sc).forEach(el => {
+    at(+el.dataset.at, () => { el.classList.add("on"); if (el.classList.contains("count")) countUp(el); $$(".count", el).forEach(c => countUp(c)); });
+    if (el.dataset.until) at(+el.dataset.until, () => el.classList.remove("on"));
+  });
+}
+
+const SCENES = [
+  ["s1", 5000, () => {}],
+  ["s2", 7000, () => {
+    const pile = $("#pile");
+    for (let i = 0; i < 9; i++) at(150 + i * 260, () => {
+      const d = document.createElement("div");
+      d.className = "doc card pop";
+      d.style.left = `${40 + (i % 3) * 150 + (i * 13) % 30}px`; d.style.top = `${30 + Math.floor(i / 3) * 110 + (i * 7) % 20}px`;
+      d.style.transform = `rotate(${((i * 37) % 13) - 6}deg)`;
+      d.innerHTML = `<b>Interview ${i + 1}</b>${[90, 70, 85, 60, 80, 75].map(w => `<div class="line" style="width:${w}%"></div>`).join("")}`;
+      pile.append(d); requestAnimationFrame(() => d.classList.add("on"));
+    });
+  }],
+  ["s3", 9000, () => {}],
+  ["s4", 17000, () => {
+    const caps = ["Prepare: the text is extracted, you say who is who, an agent checks the transcript.",
+                  "Read: five AI readers, each on a part or the whole interview. The program checks every quote.",
+                  "Themes: an agent groups the findings of every interview into themes. You approve the list.",
+                  "Interpret: each interview is re-read against the themes, and read behind the lines.",
+                  "Approve: you approve each interview; the comparison across interviews runs by itself."];
+    for (let i = 0; i < 5; i++) at(1800 + i * 2900, () => {
+      $$(".ph").forEach((p, j) => { p.classList.toggle("lit", j === i); p.classList.toggle("done", j < i); });
+      $("#track i").style.width = `${(i + 1) * 20}%`;
+      const c = $("#phcap"); c.classList.remove("on");
+      setTimeout(() => { c.textContent = caps[i]; c.classList.add("on"); }, 250);
+    });
+    at(16300, () => $$(".ph").forEach(p => { p.classList.remove("lit"); p.classList.add("done"); }));
+  }],
+  ["s5", 10000, () => { at(2300, () => $("#hl").classList.add("on")); at(2700, () => $("#hl2").classList.add("on")); at(3600, () => $("#stamp").classList.add("on")); }],
+  ["s6", 11500, () => {
+    const cur = $("#cursor");
+    const click = (btn, then) => { const r = btn.getBoundingClientRect(); cur.style.left = `${r.left + r.width / 2 - 13}px`; cur.style.top = `${r.top + r.height / 2 - 13}px`;
+      setTimeout(() => { cur.classList.add("down"); btn.classList.add("press"); }, 1000);
+      setTimeout(() => { cur.classList.remove("down"); btn.classList.remove("press"); then(); }, 1250); };
+    at(2600, () => click($("#b1"), () => { $("#d1").classList.add("out"); $("#d2").classList.remove("wait"); $("#q1").classList.add("gone"); $("#q2").classList.add("cur"); }));
+    at(7000, () => click($("#b2"), () => { $("#d2").classList.add("out"); $("#d3").classList.remove("wait"); $("#q2").classList.add("gone"); $("#q3").classList.add("cur"); }));
+  }],
+  ["s7", 11000, () => {
+    const gt = $("#gt"), names = ["A person beats a policy", "Values vs tools", "Data kept in-house", "Training gaps", "Funder pressure"];
+    gt.innerHTML = `<tr><th></th>${[1, 2, 3, 4, 5, 6].map(n => `<th style="text-align:center">${n}</th>`).join("")}</tr>` +
+      names.map(n => `<tr><th>${n}</th>${[1, 2, 3, 4, 5, 6].map(() => "<td></td>").join("")}</tr>`).join("");
+    const lv = [[3,3,2,3,1,3],[2,3,3,1,2,2],[1,0,2,3,3,1],[0,1,0,0,1,0],[2,1,0,2,0,1]], col = ["#efece6", "#cddff1", "#8db6df", "#2c6fb3"];
+    $$("td", gt).forEach((td, i) => at(1700 + i * 70, () => { td.style.background = col[lv[Math.floor(i / 6)][i % 6]]; }));
+    at(1300, () => $$("#chart i").forEach(i => { i.style.width = i.dataset.w + "%"; }));
+  }],
+  ["s8", 11000, () => {
+    const slides = [["Key takeaways", ["A person beats a policy", "Rules exist, practice runs on trust", "Data stays in-house when it matters"]],
+                    ["Themes, ranked", ["A person beats a policy · 11 of 12", "Values vs tools · 9 of 12", "Funder pressure · 5 of 12"]],
+                    ["Earlier conclusions", ["“A person beats a policy”: supported by 10", "complicated by 2"]]];
+    const show = (k) => { const s = slides[k], el = $("#slin"); el.style.opacity = 0;
+      setTimeout(() => { el.innerHTML = `<h4 class="serif">${s[0]}</h4><ul>${s[1].map(x => `<li>${x}</li>`).join("")}</ul>`; el.style.opacity = 1; }, 300); };
+    show(0); at(3000, () => show(1)); at(6000, () => show(2));
+    at(3600, () => $$(".hide2").forEach(n => { n.classList.add("hide"); n.textContent = /\d/.test(n.textContent) ? "[year]" : "[name]"; }));
+  }],
+  ["s9", 6500, () => {}],
+  ["s10", 7000, () => {}],
+];
+// Drawn at 1280x720, scaled to fit the window it is shown in (the platform shows it in a smaller frame).
+function fit() {
+  const k = Math.min(innerWidth / 1280, innerHeight / 720);
+  document.body.style.transform = `translate(${(innerWidth - 1280 * k) / 2}px, ${(innerHeight - 720 * k) / 2}px) scale(${k})`;
+}
+addEventListener("resize", fit); fit();
+addEventListener("keydown", (e) => { if (e.key === "Escape" && parent !== window) parent.postMessage("pitch-close", "*"); });
+window.TOTAL = SCENES.reduce((n, s) => n + s[1], 0);
+window.startPitch = () => {
+  let t = 0;
+  SCENES.forEach(([id, ms, extra]) => { at(t, () => { play(id); extra(); }); t += ms; });
+  at(t, () => { window.PITCH_DONE = true; });
+};
+if (!/record/.test(location.hash)) window.startPitch();  // opened by hand: plays at once
+</script>
+</body>
+</html>
